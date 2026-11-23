@@ -25,10 +25,10 @@ Without `DATABASE_URL`, the app uses an embedded PostgreSQL stored in `web/.data
 
 ## Put the app online (phone + computer)
 
-1. Push this project to a private GitHub repository.
-2. Import it into Vercel, with **Root Directory** set to `web`.
-3. Add `DATABASE_URL` in Vercel → Settings → Environment Variables.
-4. Deploy, then open the site and create the owner account.
+1. Import the GitHub repository into Vercel, with **Root Directory** set to `web`.
+2. Add a Neon Postgres database from Vercel → Storage (it sets `DATABASE_URL` for you), or add `DATABASE_URL` yourself.
+3. Add a `SETUP_CODE` environment variable: a long secret phrase only you know. Without it, the setup page stays locked in production.
+4. Deploy, open the site, and create the owner account using that setup code.
 
 ## What v1 includes
 

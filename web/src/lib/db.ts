@@ -28,7 +28,7 @@ async function createDb(): Promise<Db> {
     const pool = new Pool({
       connectionString: url,
       max: 5,
-      ssl: local ? undefined : { rejectUnauthorized: false },
+      ssl: local ? undefined : { rejectUnauthorized: true },
     });
     const query: QueryFn = async (text, params = []) => (await pool.query(text, params as any[])).rows;
     return {
@@ -72,15 +72,19 @@ async function migrate(db: Db) {
     "create table if not exists schema_migrations (id text primary key, applied_at timestamptz not null default now())",
   );
   const done = new Set((await db.query("select id from schema_migrations")).map((r) => r.id as string));
-  for (const m of MIGRATIONS) {
-    if (done.has(m.id)) continue;
-    await db.transaction(async (q) => {
+  if (MIGRATIONS.every((m) => done.has(m.id))) return;
+  // Several server instances can start at once when hosted; a lock makes sure only one migrates.
+  await db.transaction(async (q) => {
+    await q("select pg_advisory_xact_lock(727274001)");
+    const applied = new Set((await q("select id from schema_migrations")).map((r) => r.id as string));
+    for (const m of MIGRATIONS) {
+      if (applied.has(m.id)) continue;
       for (const stmt of m.sql.split(/;\s*\n/).map((s) => s.trim()).filter(Boolean)) {
         await q(stmt);
       }
       await q("insert into schema_migrations (id) values ($1)", [m.id]);
-    });
-  }
+    }
+  });
 }
 
 const g = globalThis as unknown as { __cpisDb?: Promise<Db> };
