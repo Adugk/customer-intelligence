@@ -1,0 +1,7 @@
+# tool caches and personal settings
+.impeccable/
+.claude/settings.local.json
+
+# environment files with secrets (DATABASE_URL etc.)
+.env*
+!.env.example
