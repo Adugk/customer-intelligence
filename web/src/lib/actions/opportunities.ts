@@ -19,9 +19,9 @@ export async function createOpportunity(fd: FormData) {
   if (!rid) redirect("/pipeline");
   const r = await one("select * from product_requirement where id = $1", [rid]);
   if (!r) redirect("/pipeline");
-  if (r.demand_status !== "qualified") redirect(`/requirements/${rid}?error=Only+qualified+requirements+can+become+opportunities`);
+  if (r.demand_status !== "qualified") redirect(`/requirements/${rid}?error=Mark+this+product+as+%E2%80%9CReady+to+quote%E2%80%9D+before+starting+a+deal.`);
   const qty = num(fd, "quantity", { min: 0 }) ?? r.next_purchase_qty ?? r.qty_per_order;
-  if (!qty) redirect(`/requirements/${rid}?error=Enter+a+quantity+for+the+opportunity`);
+  if (!qty) redirect(`/requirements/${rid}?error=Please+enter+a+quantity+for+the+deal.`);
   const id = await tx(async (run) => {
     const o = (
       await run(
@@ -50,11 +50,11 @@ export async function updateOpportunity(fd: FormData) {
   const commitment = choice(fd, "commitment_level", OPT.commitment) ?? o.commitment_level;
   const err = (m: string): never => redirect(`/opportunities/${id}?error=${encodeURIComponent(m)}`);
   if (NEEDS_FINANCIAL_OR_WRITTEN.includes(stage) && !["written", "deposit_paid", "fully_paid"].includes(commitment)) {
-    err("A confirmed order needs a written order, a deposit or full payment. Use 'Reserved' for verbal commitments.");
+    err("A confirmed order needs a written order, a deposit or full payment. If the customer only said yes, choose “Verbal yes (not paid)”.");
   }
-  if (stage === "closed_won" && commitment !== "fully_paid") err("Closed – won requires full payment.");
+  if (stage === "closed_won" && commitment !== "fully_paid") err("“Won” is only for deals that are fully paid.");
   const lost = choice(fd, "lost_reason", OPT.lostReason);
-  if ((stage === "closed_lost" || stage === "cancelled") && !lost) err("Choose a reason when an opportunity is lost or cancelled.");
+  if ((stage === "closed_lost" || stage === "cancelled") && !lost) err("Please choose why the deal was lost or cancelled.");
   await tx(async (run) => {
     await run(
       `update opportunity set title=$2, stage=$3, commitment_level=$4, expected_purchase_date=$5, lost_reason=$6, lost_reason_detail=$7, notes=$8, updated_at=now() where id=$1`,

@@ -20,12 +20,12 @@ export async function logInteraction(fd: FormData) {
   const outcome = choice(fd, "outcome", OPT.outcome);
   const summary = str(fd, "summary", 1000);
   const err = (m: string): never => redirect(`/customers/${bid}/log?error=${encodeURIComponent(m)}`);
-  if (!channel || !purpose || !outcome || !summary) err("Channel, purpose, outcome and summary are required.");
+  if (!channel || !purpose || !outcome || !summary) err("Please fill in how you talked, why, how it went, and a short summary.");
   const nextDate = date(fd, "next_date");
   const noFollowReason = str(fd, "no_follow_up_reason", 300);
-  if (!nextDate && !noFollowReason) err("Set a next follow-up date, or say why no follow-up is needed.");
+  if (!nextDate && !noFollowReason) err("Please choose a date for the next follow-up, or write why none is needed.");
   const occurredDate = date(fd, "occurred_date") ?? todayISO();
-  if (occurredDate > todayISO()) err("The interaction date cannot be in the future.");
+  if (occurredDate > todayISO()) err("The date can't be in the future.");
   const occurredTime = /^\d{2}:\d{2}$/.test(str(fd, "occurred_time") ?? "") ? str(fd, "occurred_time") : "12:00";
   const fromFollowUp = uuid(fd, "follow_up_id");
 
@@ -81,11 +81,11 @@ export async function addFollowUp(fd: FormData) {
   const due = date(fd, "due_date");
   const purpose = str(fd, "purpose", 300);
   if (!bid) redirect("/follow-ups");
-  if (!due || !purpose) redirect(`/customers/${bid}?tab=overview&error=Follow-up+needs+a+date+and+purpose`);
+  if (!due || !purpose) redirect(`/customers/${bid}?tab=overview&error=Please+give+the+follow-up+a+date+and+say+what+it+is+for.`);
   const contactId = uuid(fd, "contact_id");
   if (contactId) {
     const c = await one("select contact_permission from contact where id = $1", [contactId]);
-    if (c?.contact_permission === "asked_not_to_contact") redirect(`/customers/${bid}?error=This+contact+asked+not+to+be+contacted`);
+    if (c?.contact_permission === "asked_not_to_contact") redirect(`/customers/${bid}?error=This+person+asked+us+not+to+contact+them.`);
   }
   await q(
     `insert into follow_up (business_id, contact_id, requirement_id, opportunity_id, due_date, due_time, action_type, purpose)

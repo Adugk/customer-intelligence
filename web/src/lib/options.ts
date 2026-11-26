@@ -82,14 +82,14 @@ export const BASIS = ["confirmed", "observed", "documented", "estimate", "assump
 export type Basis = (typeof BASIS)[number] | "calculated";
 
 export const BASIS_META: Record<string, { label: string; icon: string; cls: string; weight: number }> = {
-  confirmed: { label: "Confirmed", icon: "✔", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200", weight: 1 },
-  observed: { label: "Observed", icon: "👁", cls: "bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200", weight: 1 },
-  documented: { label: "Documented", icon: "📄", cls: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200", weight: 1 },
-  calculated: { label: "Calculated", icon: "∑", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200", weight: 1 },
-  estimate: { label: "Estimate", icon: "≈", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200", weight: 0.5 },
-  assumption: { label: "Assumption", icon: "?", cls: "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200", weight: 0 },
-  unknown: { label: "Unknown", icon: "—", cls: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400", weight: 0 },
-  not_disclosed: { label: "Not disclosed", icon: "🔒", cls: "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300", weight: 0 },
+  confirmed: { label: "Customer told us", icon: "✔", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200", weight: 1 },
+  observed: { label: "We saw it", icon: "👁", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200", weight: 1 },
+  documented: { label: "From a document", icon: "📄", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200", weight: 1 },
+  calculated: { label: "Worked out by the app", icon: "∑", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200", weight: 1 },
+  estimate: { label: "Our estimate", icon: "≈", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200", weight: 0.5 },
+  assumption: { label: "Our guess", icon: "?", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200", weight: 0 },
+  unknown: { label: "Customer doesn't know", icon: "—", cls: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400", weight: 0 },
+  not_disclosed: { label: "Customer won't say", icon: "🔒", cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300", weight: 0 },
 };
 
 export function basisWeight(b: string | null | undefined): number {
@@ -120,24 +120,102 @@ const LABEL_OVERRIDES: Record<string, string> = {
   etb: "ETB",
   tiktok: "TikTok",
   mobile_money: "Mobile money (telebirr, M-PESA)",
-  closed_won: "Closed – won",
-  closed_lost: "Closed – lost",
-  in_fulfilment: "In fulfilment",
-  reserved: "Reserved (no payment)",
-  confirmed: "Confirmed",
+  closed_won: "Won (paid in full)",
+  closed_lost: "Lost",
+  in_fulfilment: "Being bought and shipped",
+  reserved: "Verbal yes (not paid)",
+  confirmed: "Confirmed order",
   deposit_paid: "Deposit paid",
   fully_paid: "Fully paid",
-  verbal: "Verbal",
+  verbal: "Verbal yes only",
   written: "Written order",
-  not_disclosed: "Not disclosed",
+  none: "Nothing yet",
+  not_disclosed: "Customer won't say",
+  not_asked: "Not asked yet",
+  unknown: "Don't know",
+  // product need status
+  mentioned: "Mentioned",
+  interested: "Interested",
+  specified: "Details known",
+  qualified: "Ready to quote",
+  well_served: "Happy with current supplier",
+  partially_served: "Partly happy",
+  underserved: "Not happy",
+  not_pursuing: "Not following up",
+  // customer stage
+  prospect: "Not contacted yet",
+  contacted: "Contacted",
+  in_discovery: "Learning their needs",
+  active_opportunity: "Deal in progress",
+  first_order_customer: "First-time buyer",
+  repeat_customer: "Repeat buyer",
+  dormant: "Inactive",
+  // will they try us?
+  not_willing: "No",
+  open_with_conditions: "Maybe, with conditions",
+  agreed_to_sample: "Will take a sample",
+  agreed_to_trial_order: "Will place a trial order",
+  // deal stages
+  identified: "New",
+  sourcing: "Finding suppliers",
+  quoted: "Price sent",
+  negotiating: "Negotiating",
+  // business types and misc
+  service_business: "Service business (salon, barber…)",
+  workshop_manufacturer: "Workshop / maker",
+  institutional_buyer: "Company or institution",
+  inbound_call_message: "They contacted us",
+  cold_visit: "We visited them",
+  personal_network: "Personal contacts",
+  event_market: "Event or market",
+  do_not_disclose_relationship: "Don't tell others they buy from us",
+  strict: "Keep fully private",
+  standard: "Normal",
+  import_via_agent_or_traveller: "Through an agent or traveller",
+  brand_distributor_ethiopia: "Brand distributor in Ethiopia",
+  own_direct_import: "They import themselves",
+  must_have: "Must have",
+  nice_to_have: "Nice to have",
+  information_gathered: "Learned something",
+  progressed: "Moved forward",
+  setback: "Went backwards",
+  not_reached: "Couldn't reach them",
+  next_purchase_reminder: "Purchase reminder",
+  our_commitment: "Our promise",
+  check_purchase_timing: "Ask when they will buy",
+  request_sample_feedback: "Ask about the sample",
+  verify_data: "Re-check information",
 };
 
 export const SEVERITY_HELP: Record<string, string> = {
-  low: "Low – inconvenience",
-  medium: "Medium – extra cost or delay",
-  high: "High – lost sales or customers",
-  critical: "Critical – cannot sell or operate that line",
+  low: "Small – just an inconvenience",
+  medium: "Medium – costs them money or time",
+  high: "Big – they lose sales or customers",
+  critical: "Very big – they can't sell that product",
 };
+
+/** Words for "Can they decide to buy?" / "Can they approve payment?" (codes shared with other lists, so kept separate). */
+export const AUTHORITY_LABELS: Record<string, string> = {
+  final: "Yes",
+  shared: "Shares the decision",
+  recommends_only: "Only advises",
+  none: "No",
+  unknown: "Don't know",
+};
+export function authorityLabel(code: string | null | undefined): string {
+  return (code && AUTHORITY_LABELS[code]) || "Don't know";
+}
+
+/** Simple status colours used everywhere: grey = not started, blue = in progress, amber = needs attention, green = done, red = problem. */
+export type Tone = "neutral" | "info" | "warn" | "ok" | "danger" | "brand";
+const TONES: Record<string, Tone> = {
+  mentioned: "neutral", interested: "info", specified: "info", qualified: "ok", well_served: "neutral", not_pursuing: "neutral",
+  prospect: "neutral", contacted: "info", in_discovery: "info", active_opportunity: "info", first_order_customer: "ok", repeat_customer: "ok", dormant: "warn", not_a_fit: "neutral", do_not_contact: "danger",
+  identified: "neutral", sourcing: "info", quoted: "info", negotiating: "info", reserved: "warn", confirmed: "ok", in_fulfilment: "ok", delivered: "ok", closed_won: "ok", closed_lost: "danger", cancelled: "danger",
+};
+export function toneOf(code: string | null | undefined): Tone {
+  return (code && TONES[code]) || "neutral";
+}
 
 export function label(code: string | null | undefined): string {
   if (code == null || code === "") return "—";

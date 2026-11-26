@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FollowUpQuickForm } from "@/components/forms";
-import { Area, Card, Chip, DateInput, Details, ErrorNote, Field, NumberInput, PageHeader, Select, Submit, Text } from "@/components/ui";
+import { Area, Card, Chip, DateInput, Details, ErrorNote, Field, NumberInput, PageHeader, Select, StatusChip, Submit, Text } from "@/components/ui";
 import { updateOpportunity, updateOpportunityLine } from "@/lib/actions/opportunities";
 import { one, q } from "@/lib/db";
 import { isUuid } from "@/lib/forms";
@@ -33,13 +33,13 @@ export default async function OpportunityPage({ params, searchParams }: PageProp
             </Link>
           </>
         }
-        back={{ href: "/pipeline", label: "Pipeline" }}
+        back={{ href: "/pipeline", label: "Deals" }}
       />
       <ErrorNote message={typeof sp.error === "string" ? sp.error : null} />
       <div className="mb-4 flex flex-wrap gap-2">
-        <Chip tone="brand">{label(o.stage)}</Chip>
-        <Chip tone={o.commitment_level === "none" ? "neutral" : o.commitment_level === "verbal" ? "warn" : "ok"}>Commitment: {label(o.commitment_level)}</Chip>
-        {total > 0 && <Chip>≈ {fmtNum(total)} ETB (estimate)</Chip>}
+        <StatusChip status={o.stage} />
+        <Chip tone={o.commitment_level === "none" ? "neutral" : o.commitment_level === "verbal" ? "warn" : "ok"}>{label(o.commitment_level)}</Chip>
+        {total > 0 && <Chip>about {fmtNum(total)} ETB</Chip>}
       </div>
 
       <div className="space-y-4">
@@ -52,42 +52,42 @@ export default async function OpportunityPage({ params, searchParams }: PageProp
                 </Link>
                 <span className="text-xs text-muted"> {l.req_code}</span>
                 <div className="text-sm text-muted">
-                  {fmtNum(l.quantity)} {l.unit} × {l.expected_unit_price != null ? fmtMoney(l.expected_unit_price, l.currency) : "price not set"}
+                  {fmtNum(l.quantity)} {l.unit} × {l.expected_unit_price != null ? fmtMoney(l.expected_unit_price, l.currency) : "no price yet"}
                 </div>
                 <form action={updateOpportunityLine} className="mt-2 grid grid-cols-3 gap-2">
                   <input type="hidden" name="opportunity_id" value={id} />
                   <input type="hidden" name="line_id" value={l.id} />
                   <NumberInput name="quantity" defaultValue={l.quantity} />
-                  <NumberInput name="expected_unit_price" defaultValue={l.expected_unit_price} placeholder="Unit price" />
+                  <NumberInput name="expected_unit_price" defaultValue={l.expected_unit_price} placeholder="Price per unit" />
                   <Select name="currency" options={OPT.currency} defaultValue={l.currency} blank={false} />
-                  <button className="btn-ghost col-span-3 sm:col-span-1">Update line</button>
+                  <button className="btn-ghost col-span-3 sm:col-span-1">Save</button>
                 </form>
               </li>
             ))}
           </ul>
         </Card>
 
-        <Card title="Stage and commitment">
+        <Card title="Where is this deal?">
           <form action={updateOpportunity} className="space-y-3">
             <input type="hidden" name="opportunity_id" value={id} />
             <Field label="Title">
               <Text name="title" defaultValue={o.title} />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Stage" hint="Reserved = verbal yes, no payment.">
+              <Field label="Stage">
                 <Select name="stage" options={OPT.oppStage} defaultValue={o.stage} blank={false} />
               </Field>
-              <Field label="Commitment level" hint="Confirmed needs written order, deposit or payment.">
+              <Field label="How firm is it?" hint="A confirmed order needs a written order, a deposit or a payment.">
                 <Select name="commitment_level" options={OPT.commitment} defaultValue={o.commitment_level} blank={false} />
               </Field>
               <Field label="Expected purchase date">
                 <DateInput name="expected_purchase_date" defaultValue={o.expected_purchase_date} />
               </Field>
-              <Field label="Lost / cancelled reason">
+              <Field label="If lost or cancelled: why">
                 <Select name="lost_reason" options={OPT.lostReason} defaultValue={o.lost_reason} />
               </Field>
             </div>
-            <Field label="Lost reason detail">
+            <Field label="More details">
               <Text name="lost_reason_detail" defaultValue={o.lost_reason_detail} />
             </Field>
             <Field label="Note about this change">
@@ -97,15 +97,15 @@ export default async function OpportunityPage({ params, searchParams }: PageProp
               <Area name="notes" defaultValue={o.notes} rows={2} />
             </Field>
             <Submit>Save</Submit>
-            <p className="text-xs text-muted">Marking “Closed – won” (fully paid) records the purchase date and quantity on each product requirement.</p>
+            <p className="text-xs text-muted">When you mark a deal as won, the purchase date and quantity are saved on the customer&apos;s product.</p>
           </form>
         </Card>
 
-        <Details summary="+ Schedule a follow-up for this opportunity">
+        <Details summary="+ Plan a follow-up for this deal">
           <FollowUpQuickForm businessId={o.business_id} contacts={contacts} opportunityId={id} returnTo={`/opportunities/${id}`} defaultDate={addDays(todayISO(), 3)} />
         </Details>
 
-        <Card title="Stage history">
+        <Card title="History">
           <ul className="space-y-1 text-sm">
             {history.map((h) => (
               <li key={h.id}>

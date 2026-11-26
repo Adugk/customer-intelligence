@@ -19,39 +19,39 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
       <ErrorNote message={typeof sp.error === "string" ? sp.error : null} />
       <form action={updateBusiness} className="space-y-4">
         <input type="hidden" name="business_id" value={id} />
-        <Card title="Identity">
+        <Card title="Basic details">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Trading name *">
+            <Field label="Name *">
               <Text name="trading_name" defaultValue={b.trading_name} required />
             </Field>
-            <Field label="Other names / spellings" hint="Amharic or English variants; used for search and duplicate checks.">
+            <Field label="Other names or spellings" hint="For example the Amharic name. Helps search and avoids duplicates.">
               <Text name="alternate_names" defaultValue={b.alternate_names} />
             </Field>
-            <Field label="Business type *">
+            <Field label="Type *">
               <Select name="business_type" options={OPT.businessType} defaultValue={b.business_type} required />
             </Field>
-            <Field label="Legal name">
+            <Field label="Registered name">
               <Text name="legal_name" defaultValue={b.legal_name} />
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="Sectors">
+            <Field label="What they sell">
               <Checks name="sectors" options={OPT.sectors} values={b.sectors} />
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="What they sell overall">
+            <Field label="Their products, in a sentence">
               <Text name="product_range_summary" defaultValue={b.product_range_summary} />
             </Field>
           </div>
         </Card>
 
-        <Card title="Profile">
+        <Card title="More about the business">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Price positioning">
+            <Field label="Price level">
               <Select name="price_positioning" options={OPT.pricePositioning} defaultValue={b.price_positioning} />
             </Field>
-            <Field label="Staff size (observed)">
+            <Field label="Number of staff (what you saw)">
               <Select name="staff_size_band" options={OPT.staffSize} defaultValue={b.staff_size_band} />
             </Field>
             <Field label="Years operating">
@@ -70,7 +70,7 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
                 ))}
               </select>
             </Field>
-            <Field label="Business TIN" hint="Only needed for formal invoices later. Never personal ID numbers.">
+            <Field label="Business TIN" hint="Only needed for invoices. Never store personal ID numbers.">
               <Text name="tin" defaultValue={b.tin} inputMode="numeric" />
             </Field>
           </div>
@@ -84,8 +84,8 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
           </div>
         </Card>
 
-        <Card title="Sourcing status">
-          <Field label="Overall, is this business well served by its current sources?">
+        <Card title="Happy with current suppliers?">
+          <Field label="Overall, are they happy with where they buy now?">
             <Select name="sourcing_status" options={OPT.sourcingStatus} defaultValue={b.sourcing_status} blank={false} />
           </Field>
           <div className="mt-3">
@@ -93,14 +93,14 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
           </div>
         </Card>
 
-        <Card title="Relevance check">
+        <Card title="Is this customer a good fit?">
           <div className="space-y-2 text-sm">
             {(
               [
-                ["rel_categories", "Sells products in categories we can realistically source"],
-                ["rel_recurring", "Those products are bought or sold repeatedly"],
-                ["rel_imported", "Products are likely imported or hard to find locally"],
-                ["rel_stock", "Holds meaningful stock or has repeat customer traffic"],
+                ["rel_categories", "Sells products we can get for them"],
+                ["rel_recurring", "Buys those products again and again"],
+                ["rel_imported", "Products are imported or hard to find in Addis"],
+                ["rel_stock", "Has a good amount of stock or many customers"],
               ] as const
             ).map(([n, t]) => (
               <label key={n} className="flex items-start gap-2">
@@ -110,18 +110,18 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
           </div>
         </Card>
 
-        <Card title="Confidentiality and status">
+        <Card title="Privacy and status">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Confidentiality" hint="'Strict' also excludes them from demand totals.">
+            <Field label="Privacy" hint="“Keep fully private” also leaves them out of demand totals.">
               <Select name="confidentiality_level" options={OPT.confidentiality} defaultValue={b.confidentiality_level} blank={false} />
             </Field>
-            <Field label="Manual stage" hint="Leave empty to let the system calculate the stage.">
+            <Field label="Set status by hand" hint="Leave on “Automatic” and the app sets it for you.">
               <Select name="stage_override" options={OPT.stageOverride} defaultValue={b.stage_override} blank="Automatic" />
             </Field>
-            <Field label="Reason for manual stage">
+            <Field label="Why">
               <Text name="stage_override_reason" defaultValue={b.stage_override_reason} />
             </Field>
-            <Field label="Not-a-fit reason">
+            <Field label="If not a fit: why">
               <Select name="not_a_fit_reason" options={OPT.notAFitReason} defaultValue={b.not_a_fit_reason} />
             </Field>
           </div>
@@ -139,8 +139,8 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
 
       <form action={archiveBusiness} className="mt-8 border-t border-line pt-4">
         <input type="hidden" name="business_id" value={id} />
-        <p className="mb-2 text-sm text-muted">Archiving hides the business from lists. Data is kept and nothing is deleted.</p>
-        <button className="btn-danger">Archive business</button>
+        <p className="mb-2 text-sm text-muted">Hiding removes this customer from your lists. Nothing is deleted.</p>
+        <button className="btn-danger">Hide this customer</button>
       </form>
     </div>
   );

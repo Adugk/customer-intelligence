@@ -1,21 +1,84 @@
 # Customer Purchasing Intelligence System — Customer Module Design
 
-**Status:** Design proposal, v0.1 (no code written yet)
-**Date:** 23 November 2026
+**Status:** v0.2 — design reviewed against the app that is now built (see Section 0)
+**Date:** 26 November 2026 (v0.1: 23 November 2026)
 **Scope confirmed by owner:**
 - Web app, used on a laptop and on a tablet during customer visits.
 - Single user (the owner) for now. The design leaves room for staff later.
 - Version 1 covers customer research and demand only. Quotations, orders, payments and logistics are designed as future modules, with clear connection points.
 
-**Existing code:** none. The project folder was empty when this design was written, so there are no existing features or data to preserve.
+**Existing code:** when v0.1 was written the folder was empty. Version 1 of the app has since been built from this design and is live (Next.js + PostgreSQL, see Section 16). Section 0 compares the brief with what exists.
 
 **Notation used in this document**
 - **[ASSUMPTION]** marks something I inferred that you need to confirm.
-- **[DECISION NEEDED]** marks a choice only you can make (all of them are collected in Section 12).
+- **[DECISION NEEDED]** marks a choice only you can make (all of them are collected in Section 15).
 - **Priority:** **E** = Essential (collect whenever possible), **R** = Recommended, **O** = Optional, **F** = Future version.
 - **Req-save:** the very few fields required before a record can be saved. Everything else may stay blank.
 - **Stage:** 1 = First contact, 2 = Purchasing discovery, 3 = Qualified opportunity, 4 = Transaction and relationship.
 - **Prov.** ✓ means the field carries *provenance*: where the information came from, a confidence basis, and when it was last verified (see Section 2.3).
+
+---
+
+## 0. Review against the built app (v0.2)
+
+### 0.1 The brief, item by item
+
+**✅ Built** = works in the live app · **◐ Partly built** · **○ Designed, not built**
+
+| Brief item | Where in this document | Status in the app | What is missing |
+|---|---|---|---|
+| 13.1 Business and requirements analysis | §1 | ✅ | — |
+| 13.2 Data dictionary | §4 | ◐ All customer fields built except those marked **F** | Attachments table; editable dropdown table (`lookup_value`) — dropdowns are fixed in code for now |
+| 13.3 Architecture + ER diagram | §3 | ✅ 21 tables, as in §3.2 | `demand_pool`, quotations, orders, payments, feedback (future modules) |
+| 13.4 Progressive registration | §5 | ✅ Stage 1 form (about 2 minutes), Stages 2–3 on the profile and product pages | Stage 4 needs quotations/orders/payments |
+| 13.5 Customer profile interface | §6 | ✅ Header, summary cards, tabs (simplified, see §0.3) | Guided "Visit mode", map view, follow-up calendar view |
+| 13.6 Product-demand architecture | §7 | ✅ Many product needs per customer, each tracked on its own, linked to one shared product list | Demand pools (saved groups of compatible needs) |
+| 13.7 Classification and scoring | §8 | ✅ Score with explanation, facts-only weighting, "good fit" check, automatic customer status | Calibration after ~30 finished deals |
+| 13.8 Conversations and follow-ups | §9 | ✅ Facts / observations / opinions kept apart, every conversation ends with a next step, automatic reminders, "don't forget" list | Assigning follow-ups to staff (single user now) |
+| 13.9 Reports and dashboards | §10 | ◐ Today screen, demand by product, problems, must-haves, deals, lost reasons | Customer-finding results by source, time to first order, repeat rate, retention (need orders) |
+| 13.10 Roadmap | §13 | ✅ v1 done | v1.5 and v2 items open |
+| 13.11 Risks | §14 + §0.4 | ✅ | — |
+| 13.12 Questions | §15 | Updated | — |
+
+### 0.2 The 19 business problems
+
+| # | Problem | Solved now? |
+|---|---|---|
+| 1 | Not approaching businesses randomly | ✅ "Good fit" check + filters by type, sector, area |
+| 2 | Finding decision-makers | ✅ Separate "can decide to buy" and "can approve payment" per person |
+| 3 | Products bought repeatedly | ✅ Product needs with "buys again and again / seasonal / one-off" |
+| 4 | Monthly demand vs quantity per order | ✅ Separate fields; monthly figure worked out when not stated, and labelled as such |
+| 5 | Exact specifications | ◐ Product list, details, sizes/colours, links. **Photos not yet possible** (needs file storage) |
+| 6 | Current suppliers without forcing confidential details | ✅ Supplier *type* is enough; name optional, hidden, never exported |
+| 7 | Real problems, not assumed ones | ✅ Each problem says who said it and how serious it is; "happy with current supplier" is a valid answer |
+| 8 | Stock-outs and consequences | ✅ |
+| 9 | Small orders / MOQ | ✅ Smallest and biggest order they can manage; MOQ as a problem and as a condition |
+| 10 | What makes them try a new source | ✅ "Will they try us?" + "What would make them switch" + their conditions |
+| 11 | Interest vs commitment | ✅ Two separate ladders; a verbal yes can never be saved as a confirmed order |
+| 12 | Next purchase | ✅ Stated or worked out from the buying cycle |
+| 13 | Conversation history | ✅ |
+| 14 | Not forgetting interested customers | ✅ |
+| 15 | Repeat purchases | ◐ Reminders before the next purchase; repeat-order tracking needs the order module |
+| 16 | Demand aggregation | ◐ Demand view adds up compatible needs and warns when they differ; saved groups not built |
+| 17 | Confidentiality and exclusivity | ✅ Privacy level per customer; exclusivity as a recorded condition |
+| 18 | Evidence, not assumptions | ✅ Every changing value says where it came from and when it was checked |
+| 19 | Learning from finished deals | ◐ Lost reasons and "how we found them" are recorded; the results report is not built |
+
+### 0.3 Design changes since v0.1
+
+1. **Plain words on screen.** The design terms stay in this document and in the database. The screens now use everyday words (§2.5 shows both). Stored codes did not change, so existing records keep their meaning. *(This change is in progress and not deployed yet.)*
+2. **Simpler customer page.** 5 tabs instead of 7, and 5 summary cards instead of 9 (§6.2). *(In progress, not deployed.)*
+3. **Individual customers.** The wider platform also serves people buying for personal use. Add `customer_kind` (`business` default / `individual`) to `business`, and hide business-only questions for individuals. No existing record changes. **[DECISION NEEDED: Q16]**
+4. **Product need → request.** A product need (ongoing: "buys 100 chargers a month") should be able to create a **sourcing request** (one specific ask: "find 50 by 10 December"). Requests, quotes and orders link back to the need, so a finished order updates its last purchase date and quantity automatically (§12). The link from a won deal to the need already works.
+5. **Current supplier ↔ our supplier list.** When the supplier module exists, a "where they buy now" record can optionally point to a supplier in our own list, so the name is typed once and stays hidden.
+6. **Dropdown lists in code.** For v1, dropdown values live in the code instead of an editable table. Changing a list needs a small code change. Moving them to a table is planned for v2.
+
+### 0.4 New risks noticed while building
+
+- **Product matching is the main manual chore.** A product need must be linked to the product list before it can be "Ready to quote" or added up with others. If this is skipped, demand totals stay split. The app shows "Not linked to your product list" on every unlinked need.
+- **The score can only be as good as the facts entered.** With few confirmed facts, most scores will be low. That is intended; the "% backed by facts" figure shows when a low score just means "not enough information yet".
+- **No photos yet.** Field staff will want to photograph shelves and products. Until file storage is added, use the "Links" field (for example a shared Google Drive link).
+- **One owner login.** Fine for now. Add staff accounts and roles (§11) before anyone else uses the app.
 
 ---
 
@@ -198,6 +261,28 @@ To avoid confusing terms, the system uses these words consistently:
 | **Follow-up** | A scheduled future action |
 
 Words to **avoid** in the interface: "lead" (ambiguous), "hot/cold customer" (unsupported judgement), "good/bad customer".
+
+**Design term → word on screen (v0.2).** The database and this document keep the design terms; the app shows the everyday word.
+
+| Design term | On screen |
+|---|---|
+| Business | Customer |
+| Contact | Person |
+| Requirement | Product (on a customer) / "product need" in explanations |
+| Purchasing profile | How they buy |
+| Source | Where they buy now |
+| Buying condition | Their conditions |
+| Interaction | Conversation |
+| Opportunity | Deal |
+| Commitment level | How firm is it? |
+| Demand status: mentioned / interested / specified / qualified / well served / not pursuing | Mentioned / Interested / Details known / Ready to quote / Happy with current supplier / Not following up |
+| Willingness to test | Will they try us? |
+| Sourcing status | Happy with current suppliers? |
+| Basis (provenance): confirmed / observed / documented / estimate / assumption / unknown / not disclosed / calculated | Customer told us / We saw it / From a document / Our estimate / Our guess / Customer doesn't know / Customer won't say / Worked out by the app |
+| Opportunity score | Priority score ("% backed by facts" = evidence completeness) |
+| Relevance check | Is this customer a good fit? |
+| Acquisition source | How we found them |
+| Confidentiality level | Privacy |
 
 ### 2.6 Naming and ID conventions
 
@@ -752,6 +837,18 @@ Business name · type · area · relationship stage · priority score (tap to se
 
 **Actions available everywhere:** Log interaction · Add follow-up · Add product requirement · Add problem · Create opportunity · Edit profile · Archive.
 
+**Revised in v0.2 (simpler, based on use).** The eight cards and seven tabs above showed too much at once. The page is now:
+
+| Tab | Content |
+|---|---|
+| **Summary** | 5 cards: **Next step** (planned follow-ups + "plan one"), **Products they need** (top 4 by priority + next purchase), **Main problems**, **Who decides**, **Last conversation** (+ tags) |
+| **Products** | Product needs with status, monthly quantity, next purchase, score; "Add a product" |
+| **Problems & suppliers** | Problems, their conditions, where they buy now, how they buy — in that order (most useful first) |
+| **People & places** | People, shops and branches |
+| **Conversations & deals** | Deals, then the conversation timeline |
+
+Header: name, one line of facts (type · area · map · code), one status badge, privacy badge only when not "Normal", priority score, and two buttons — **Record conversation** (main) and **Edit**. Must-have conditions moved into "Problems & suppliers"; "data health" was dropped from the summary because it did not lead to an action. Files will be a sixth tab once file storage exists.
+
 ### 6.3 Visit Mode (the 5–10 minute conversation)
 A full-screen, card-based flow designed to feel like a conversation, not a questionnaire:
 - One topic per card, with suggested **natural questions** to ask (for example "When did you last restock these? How many did you take?") and tap-to-answer chips.
@@ -1064,6 +1161,16 @@ Answers to these will finalize the design before any code is written.
 13. **Suppliers:** you started describing what you want to record about suppliers. That belongs in the Supplier module, but it affects the `current_source` link, so please share it when ready.
 14. **Existing records:** do you already have customer information in notebooks, Excel or phone contacts that needs importing?
 15. **The rest of your brief:** your message mentioned "after this it will continue on the files". If there are further sections or files, send them and I'll incorporate them before implementation.
+
+Questions 1–12 were answered with "use your defaults" (Section 16). Questions 13–15 are covered by later briefs or still open.
+
+**Still open after v0.2 (26 November 2026)**
+
+16. **Individual customers:** should personal buyers (people ordering one phone or perfume for themselves) live in the same customer list with a "business / individual" switch, or in a separate list? *Recommendation: same list, with a switch.*
+17. **Value bands:** the scoring still uses placeholder ETB bands (under 20,000 / 20,000–100,000 / 100,000–500,000 / over 500,000 per month). Are these sensible for your customers?
+18. **File storage:** may we add Vercel Blob (part of your current hosting) for product photos, shelf photos and documents? It has a free allowance; heavy use costs money.
+19. **Staff:** who else will use the app in the next three months, and what should each person be allowed to see? — **Answered 26 Nov 2026: one person uses the app.** Staff accounts and roles stay in the later roadmap.
+20. **Existing records:** do you have customers in notebooks, Excel or phone contacts that need importing? — **Answered 26 Nov 2026: no imports.** CSV import is dropped from the roadmap.
 
 ---
 

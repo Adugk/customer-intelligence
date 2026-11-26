@@ -35,7 +35,7 @@ export function FollowUpRow({ f, returnTo, showBusiness = true }: { f: Row; retu
       {f.status === "open" && (
         <div className="flex shrink-0 gap-2">
           <Link href={`/customers/${f.business_id}/log?follow_up=${f.id}`} className="btn-primary min-h-9 px-3 text-xs">
-            Log result
+            Done — record it
           </Link>
           <form action={updateFollowUp}>
             <input type="hidden" name="follow_up_id" value={f.id} />
@@ -48,7 +48,7 @@ export function FollowUpRow({ f, returnTo, showBusiness = true }: { f: Row; retu
             <input type="hidden" name="follow_up_id" value={f.id} />
             <input type="hidden" name="op" value="cancel" />
             <input type="hidden" name="return_to" value={returnTo} />
-            <button className="btn-ghost min-h-9 px-3 text-xs" title="Cancel this follow-up">
+            <button className="btn-ghost min-h-9 px-3 text-xs" title="Cancel this follow-up" aria-label="Cancel this follow-up">
               ✕
             </button>
           </form>

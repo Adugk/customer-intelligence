@@ -72,14 +72,14 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
       {error && <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{error}</p>}
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Business</h2>
+        <h2 className="text-sm font-semibold">Customer</h2>
         <label className="block">
-          <span className="lbl">Business name or description *</span>
-          <input ref={nameRef} onChange={checkDups} name="trading_name" required maxLength={120} className="inp" placeholder="e.g. Selam Cosmetics, or 'Phone shop opposite Tana Market'" />
+          <span className="lbl">Name *</span>
+          <input ref={nameRef} onChange={checkDups} name="trading_name" required maxLength={120} className="inp" placeholder="e.g. Selam Cosmetics — or 'Phone shop opposite Tana Market'" />
         </label>
         {dups.length > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950">
-            <div className="font-medium text-amber-900 dark:text-amber-200">Possible duplicate — check before saving:</div>
+            <div className="font-medium text-amber-900 dark:text-amber-200">This customer may already exist:</div>
             <ul className="mt-1 space-y-1">
               {dups.map((d) => (
                 <li key={d.id}>
@@ -94,7 +94,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="lbl">Business type *</span>
+            <span className="lbl">Type *</span>
             <select name="business_type" required className="inp" defaultValue="">
               <option value="" disabled>
                 — Select —
@@ -110,7 +110,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
           </label>
         </div>
         <fieldset>
-          <legend className="lbl">Sectors</legend>
+          <legend className="lbl">What they sell</legend>
           <div className="flex flex-wrap gap-2">
             {OPT.sectors.map((s) => (
               <label key={s} className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line px-3 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand/10 has-[:checked]:text-brand">
@@ -123,7 +123,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
       </section>
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Location</h2>
+        <h2 className="text-sm font-semibold">Where they are</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="lbl">Area</span>
@@ -148,7 +148,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={captureGps} className="btn-ghost">
-            📍 Use my current location
+            Use my location
           </button>
           {gpsMsg && <span className="text-sm text-muted">{gpsMsg}</span>}
           <input type="hidden" name="gps_lat" value={gps?.lat ?? ""} />
@@ -157,7 +157,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
       </section>
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Contact person</h2>
+        <h2 className="text-sm font-semibold">Person you spoke to</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="lbl">Name</span>
@@ -179,12 +179,12 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             <input name="telegram" className="inp" placeholder="@handle or number" />
           </label>
           <label className="block">
-            <span className="lbl">Who are they in buying decisions?</span>
+            <span className="lbl">Can they decide what to buy?</span>
             <select name="decision_role" className="inp" defaultValue="unknown">
-              <option value="owner">Owner</option>
-              <option value="purchasing_decision_maker">Decides purchases</option>
-              <option value="influencer">Influences / recommends</option>
-              <option value="staff_user">Staff only</option>
+              <option value="owner">Yes — they are the owner</option>
+              <option value="purchasing_decision_maker">Yes — they decide purchases</option>
+              <option value="influencer">No, but they advise</option>
+              <option value="staff_user">No — staff only</option>
               <option value="unknown">Don&apos;t know yet</option>
             </select>
           </label>
@@ -198,15 +198,15 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
       </section>
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Products they mentioned</h2>
+        <h2 className="text-sm font-semibold">Products they need</h2>
         <label className="block">
           <span className="lbl">One product per line</span>
           <textarea name="products" rows={3} className="inp" placeholder={"e.g. 25W USB-C chargers\nPhone cases for iPhone 15"} />
-          <span className="hint">Each line becomes a product requirement. Add details later.</span>
+          <span className="hint">Each line is saved as a separate product. You can add details later.</span>
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="lbl">Category (optional, applies to all)</span>
+            <span className="lbl">Category (optional)</span>
             <select name="category_id" className="inp" defaultValue="">
               <option value="">— Select —</option>
               {categories.map((c) => (
@@ -218,7 +218,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
           </label>
           <label className="flex items-center gap-2 self-end pb-3 text-sm">
             <input type="checkbox" name="interested" className="h-5 w-5 accent-[var(--brand)]" />
-            They said they would consider another source
+            They said they would buy from a new supplier
           </label>
         </div>
         <label className="block">
@@ -241,26 +241,26 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             </select>
           </label>
           <label className="block">
-            <span className="lbl">This contact was by</span>
+            <span className="lbl">Today you talked by</span>
             <select name="channel" className="inp" defaultValue="visit">
               <Opt list={OPT.interactionChannel} />
             </select>
           </label>
         </div>
         <label className="block">
-          <span className="lbl">Purpose of follow-up</span>
+          <span className="lbl">Follow-up is for</span>
           <input name="follow_up_purpose" className="inp" placeholder="e.g. Ask about monthly quantities" />
         </label>
       </section>
 
       <details className="card p-4">
-        <summary className="cursor-pointer text-sm font-semibold">Relevance check (optional)</summary>
+        <summary className="cursor-pointer text-sm font-semibold">Is this customer a good fit? (optional)</summary>
         <div className="mt-3 space-y-2 text-sm">
           {[
-            ["rel_categories", "Sells products in categories we can realistically source"],
-            ["rel_recurring", "Those products are bought or sold repeatedly"],
-            ["rel_imported", "Products are likely imported or hard to find locally"],
-            ["rel_stock", "Holds meaningful stock or has repeat customer traffic"],
+            ["rel_categories", "Sells products we can get for them"],
+            ["rel_recurring", "Buys those products again and again"],
+            ["rel_imported", "Products are imported or hard to find in Addis"],
+            ["rel_stock", "Has a good amount of stock or many customers"],
           ].map(([n, t]) => (
             <label key={n} className="flex items-start gap-2">
               <input type="checkbox" name={n} className="mt-0.5 h-5 w-5 accent-[var(--brand)]" /> {t}
@@ -271,7 +271,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
 
       <div className="sticky bottom-16 z-10 -mx-4 border-t border-line bg-bg/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <button className="btn-primary w-full sm:w-auto" disabled={pending}>
-          {pending ? "Saving…" : "Save business"}
+          {pending ? "Saving…" : "Save customer"}
         </button>
       </div>
     </form>

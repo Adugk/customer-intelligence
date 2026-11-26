@@ -2,7 +2,9 @@
 import type { Row } from "@/lib/db";
 import { addFollowUp } from "@/lib/actions/activity";
 import { saveBranch, saveCondition, saveContact, savePurchasingProfile, saveProblem, saveSource } from "@/lib/actions/customers";
-import { label, OPT } from "@/lib/options";
+import { AUTHORITY_LABELS, BASIS_META, label, OPT } from "@/lib/options";
+
+const BASIS_LABELS = Object.fromEntries(Object.entries(BASIS_META).map(([k, v]) => [k, v.label]));
 import { Area, BasisFields, Checks, DateInput, Field, NumberInput, Select, SeveritySelect, Submit, Text } from "./ui";
 
 type Req = { id: string; customer_description: string };
@@ -19,9 +21,9 @@ function Hidden({ businessId, returnRequirementId }: { businessId: string; retur
 function ReqSelect({ requirements, value, fixed }: { requirements: Req[]; value?: string | null; fixed?: string }) {
   if (fixed) return <input type="hidden" name="requirement_id" value={fixed} />;
   return (
-    <Field label="Applies to" hint="Leave as 'whole business' if it is not about one product.">
+    <Field label="Which product?" hint="Choose 'All products' if it is not about one product.">
       <select className="inp" name="requirement_id" defaultValue={value ?? ""}>
-        <option value="">Whole business</option>
+        <option value="">All products</option>
         {requirements.map((r) => (
           <option key={r.id} value={r.id}>
             {r.customer_description}
@@ -39,34 +41,34 @@ export function SourceForm({ businessId, s, requirements = [], fixedRequirement 
       {s && <input type="hidden" name="source_id" value={s.id} />}
       <ReqSelect requirements={requirements} value={s?.requirement_id} fixed={fixedRequirement} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Type of source *">
+        <Field label="Type of supplier *">
           <Select name="source_type" options={OPT.sourceType} defaultValue={s?.source_type} required />
         </Field>
-        <Field label="Where is it?">
+        <Field label="Where is the supplier?">
           <Select name="source_origin" options={OPT.sourceOrigin} defaultValue={s?.source_origin} />
         </Field>
-        <Field label="Role for them">
+        <Field label="How much do they use it?">
           <Select name="role" options={OPT.sourceRole} defaultValue={s?.role} />
         </Field>
-        <Field label="Their satisfaction (as they said it)">
+        <Field label="How happy are they with it?">
           <Select name="satisfaction" options={OPT.satisfaction} defaultValue={s?.satisfaction} />
         </Field>
-        <Field label="Supplier name" hint="Never pressure for this. Hidden by default and excluded from exports.">
+        <Field label="Did they tell you the supplier's name?" hint="Never push for this. The name stays hidden and is never exported.">
           <Select name="name_disclosure" options={OPT.nameDisclosure} defaultValue={s?.name_disclosure ?? "not_asked"} blank={false} />
         </Field>
-        <Field label="Name (only if disclosed)">
+        <Field label="Supplier name (only if they told you)">
           <Text name="supplier_name" defaultValue={s?.supplier_name} />
         </Field>
-        <Field label="How long they have used it">
+        <Field label="Used for how long">
           <Select name="relationship_length" options={OPT.relationshipLength} defaultValue={s?.relationship_length} />
         </Field>
       </div>
-      <Field label="What this source does well">
+      <Field label="What this supplier does well">
         <Checks name="strengths" options={OPT.strengths} values={s?.strengths} />
       </Field>
-      <p className="text-xs text-muted">Record weaknesses as problems, so each one has evidence and severity.</p>
+      <p className="text-xs text-muted">Add what goes wrong with this supplier as a problem.</p>
       <BasisFields basis={s?.basis} verifiedAt={s?.verified_at} />
-      <Submit>{s ? "Save source" : "Add source"}</Submit>
+      <Submit>{s ? "Save" : "Add"}</Submit>
     </form>
   );
 }
@@ -78,37 +80,37 @@ export function ProblemForm({ businessId, p, requirements = [], fixedRequirement
       {p && <input type="hidden" name="problem_id" value={p.id} />}
       <ReqSelect requirements={requirements} value={p?.requirement_id} fixed={fixedRequirement} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Problem category *">
+        <Field label="Type of problem *">
           <Select name="category" options={OPT.problemCategory} defaultValue={p?.category} required />
         </Field>
-        <Field label="Who says so? *" hint="Our inferences must be marked as estimate or assumption.">
-          <Select name="basis" options={OPT.problemBasis} defaultValue={p?.basis ?? "confirmed"} blank={false} />
+        <Field label="Where did this come from? *" hint="If it is only our opinion, choose 'Our estimate' or 'Our guess'.">
+          <Select name="basis" options={OPT.problemBasis} defaultValue={p?.basis ?? "confirmed"} blank={false} labels={BASIS_LABELS} />
         </Field>
-        <Field label="How often *">
+        <Field label="How often? *">
           <Select name="frequency" options={OPT.problemFrequency} defaultValue={p?.frequency} required />
         </Field>
-        <Field label="Severity *">
+        <Field label="How serious? *">
           <SeveritySelect name="severity" defaultValue={p?.severity} />
         </Field>
       </div>
-      <Field label="What happens? *" hint="In the customer's words where possible.">
+      <Field label="What happens? *" hint="Use the customer's own words if you can.">
         <Area name="description" defaultValue={p?.description} required rows={2} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Impact" hint="e.g. 'Loses about 10 customers a week when out'">
+        <Field label="What it costs them" hint="e.g. 'Loses about 10 customers a week when out of stock'">
           <Text name="impact_note" defaultValue={p?.impact_note} />
         </Field>
         <Field label="What they do about it now">
           <Text name="current_workaround" defaultValue={p?.current_workaround} />
         </Field>
-        <Field label="Can we address it?">
+        <Field label="Can we help with this?">
           <Select name="addressable_by_us" options={OPT.addressable} defaultValue={p?.addressable_by_us ?? "unknown"} blank={false} />
         </Field>
         <Field label="Status">
           <Select name="status" options={OPT.problemStatus} defaultValue={p?.status ?? "active"} blank={false} />
         </Field>
         {sources.length > 0 && (
-          <Field label="Caused by source">
+          <Field label="Caused by which supplier?">
             <select className="inp" name="current_source_id" defaultValue={p?.current_source_id ?? ""}>
               <option value="">—</option>
               {sources.map((s) => (
@@ -121,7 +123,7 @@ export function ProblemForm({ businessId, p, requirements = [], fixedRequirement
           </Field>
         )}
       </div>
-      <Submit>{p ? "Save problem" : "Add problem"}</Submit>
+      <Submit>{p ? "Save" : "Add problem"}</Submit>
     </form>
   );
 }
@@ -133,32 +135,32 @@ export function ConditionForm({ businessId, c, requirements = [], fixedRequireme
       {c && <input type="hidden" name="condition_id" value={c.id} />}
       <ReqSelect requirements={requirements} value={c?.requirement_id} fixed={fixedRequirement} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Condition *">
+        <Field label="What kind of condition? *">
           <Select name="condition_type" options={OPT.conditionType} defaultValue={c?.condition_type} required />
         </Field>
-        <Field label="Importance *">
+        <Field label="How important? *">
           <Select name="importance" options={OPT.importance} defaultValue={c?.importance ?? "important"} blank={false} />
         </Field>
       </div>
-      <Field label="Detail *" hint="Specific and testable, e.g. 'At least 10% below current price', '30 days credit after third order'.">
+      <Field label="Details *" hint="Be specific, e.g. 'At least 10% cheaper than now' or '30 days to pay after the third order'.">
         <Text name="detail" defaultValue={c?.detail} required />
       </Field>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Field label="Threshold">
+        <Field label="Number (optional)">
           <NumberInput name="threshold_value" defaultValue={c?.threshold_value} />
         </Field>
         <Field label="Unit">
-          <Text name="threshold_unit" defaultValue={c?.threshold_unit} placeholder="ETB, days, pcs" />
+          <Text name="threshold_unit" defaultValue={c?.threshold_unit} placeholder="ETB, days, pieces" />
         </Field>
-        <Field label="Can we meet it?" className="col-span-2">
+        <Field label="Can we do this?" className="col-span-2">
           <Select name="our_position" options={OPT.ourPosition} defaultValue={c?.our_position} />
         </Field>
       </div>
-      <Field label="Exclusivity scope (only for exclusivity)" hint="Product, area and duration they asked for.">
+      <Field label="Exclusive deal details (only if asked)" hint="Which product, which area and for how long.">
         <Text name="exclusivity_scope" defaultValue={c?.exclusivity_scope} />
       </Field>
       <BasisFields basis={c?.basis} verifiedAt={c?.verified_at} />
-      <Submit>{c ? "Save condition" : "Add condition"}</Submit>
+      <Submit>{c ? "Save" : "Add condition"}</Submit>
     </form>
   );
 }
@@ -212,36 +214,36 @@ export function ContactForm({ businessId, c, branches = [] }: { businessId: stri
           </Field>
         )}
       </div>
-      <Field label="Role in buying decisions">
+      <Field label="Their role in buying">
         <Checks name="decision_roles" options={OPT.decisionRoles} values={c?.decision_roles} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Can commit to buying?">
-          <Select name="purchasing_authority" options={OPT.purchasingAuthority} defaultValue={c?.purchasing_authority ?? "unknown"} blank={false} />
+        <Field label="Can they decide to buy?">
+          <Select name="purchasing_authority" options={OPT.purchasingAuthority} defaultValue={c?.purchasing_authority ?? "unknown"} blank={false} labels={AUTHORITY_LABELS} />
         </Field>
-        <Field label="Can approve payment?">
-          <Select name="payment_authority" options={OPT.paymentAuthority} defaultValue={c?.payment_authority ?? "unknown"} blank={false} />
+        <Field label="Can they approve payment?">
+          <Select name="payment_authority" options={OPT.paymentAuthority} defaultValue={c?.payment_authority ?? "unknown"} blank={false} labels={AUTHORITY_LABELS} />
         </Field>
       </div>
       <BasisFields basis={c?.authority_basis} verifiedAt={c?.authority_verified_at} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Contact permission" hint="'Asked not to contact' cancels open follow-ups.">
+        <Field label="May we contact them?" hint="If they asked not to be contacted, their planned follow-ups are cancelled.">
           <Select name="contact_permission" options={OPT.contactPermission} defaultValue={c?.contact_permission ?? "not_asked"} blank={false} />
         </Field>
-        <Field label="Opt-out reason">
+        <Field label="Why they don't want contact">
           <Text name="opt_out_reason" defaultValue={c?.opt_out_reason} />
         </Field>
       </div>
-      <Field label="Permitted channels (if specific)">
+      <Field label="Only through these (if they said)">
         <Checks name="permitted_channels" options={OPT.channel} values={c?.permitted_channels} />
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="is_primary" defaultChecked={c?.is_primary ?? !c} className="h-5 w-5 accent-[var(--brand)]" /> Primary contact
+        <input type="checkbox" name="is_primary" defaultChecked={c?.is_primary ?? !c} className="h-5 w-5 accent-[var(--brand)]" /> Main contact
       </label>
       <Field label="Notes">
         <Area name="notes" defaultValue={c?.notes} rows={2} />
       </Field>
-      <Submit>{c ? "Save contact" : "Add contact"}</Submit>
+      <Submit>{c ? "Save" : "Add person"}</Submit>
     </form>
   );
 }
@@ -252,7 +254,7 @@ export function BranchForm({ businessId, b }: { businessId: string; b?: Row }) {
       <input type="hidden" name="business_id" value={businessId} />
       {b && <input type="hidden" name="branch_id" value={b.id} />}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Label">
+        <Field label="Name of this place">
           <Text name="branch_label" defaultValue={b?.branch_label ?? "Branch"} />
         </Field>
         <Field label="City">
@@ -279,7 +281,7 @@ export function BranchForm({ businessId, b }: { businessId: string; b?: Row }) {
         <Field label="Opening hours">
           <Text name="opening_hours" defaultValue={b?.opening_hours} />
         </Field>
-        <Field label="Storage note" hint="Storage limits explain small orders.">
+        <Field label="Storage space" hint="Small storage often explains small orders.">
           <Text name="storage_note" defaultValue={b?.storage_note} />
         </Field>
       </div>
@@ -292,9 +294,9 @@ export function BranchForm({ businessId, b }: { businessId: string; b?: Row }) {
         <Text name="directions" defaultValue={b?.directions} />
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="is_main" defaultChecked={b?.is_main ?? false} className="h-5 w-5 accent-[var(--brand)]" /> Main location
+        <input type="checkbox" name="is_main" defaultChecked={b?.is_main ?? false} className="h-5 w-5 accent-[var(--brand)]" /> Main shop
       </label>
-      <Submit>{b ? "Save location" : "Add location"}</Submit>
+      <Submit>{b ? "Save" : "Add"}</Submit>
     </form>
   );
 }
@@ -303,32 +305,32 @@ export function PurchasingProfileForm({ businessId, p }: { businessId: string; p
   return (
     <form action={savePurchasingProfile} className="space-y-4">
       <input type="hidden" name="business_id" value={businessId} />
-      <Field label="How does a typical restock happen?" hint="In their words.">
+      <Field label="How do they usually restock?" hint="In their own words.">
         <Area name="restock_process" defaultValue={p?.restock_process} rows={2} />
       </Field>
-      <Field label="Where they buy (all that apply)">
+      <Field label="Where they buy (tick all that apply)">
         <Checks name="source_types_used" options={OPT.sourceType} values={p?.source_types_used} />
       </Field>
-      <Field label="What triggers a restock">
+      <Field label="What makes them restock">
         <Checks name="restock_trigger" options={OPT.restockTrigger} values={p?.restock_trigger} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Do they import directly?">
           <Select name="imports_directly" options={OPT.importsDirectly} defaultValue={p?.imports_directly} />
         </Field>
-        <Field label="Typical purchase size (optional, sensitive)">
+        <Field label="Usual spend per purchase (optional)">
           <Select name="typical_purchase_value_band" options={OPT.purchaseValueBand} defaultValue={p?.typical_purchase_value_band} />
         </Field>
         <Field label="Payment timing">
           <Select name="payment_timing" options={OPT.paymentTiming} defaultValue={p?.payment_timing} />
         </Field>
-        <Field label="Credit days expected">
+        <Field label="Days to pay (if on credit)">
           <NumberInput name="credit_days_expected" defaultValue={p?.credit_days_expected} />
         </Field>
-        <Field label="Expected lead time (days)">
+        <Field label="How fast they expect delivery (days)">
           <NumberInput name="expected_lead_time_days" defaultValue={p?.expected_lead_time_days} />
         </Field>
-        <Field label="Needs formal receipt?">
+        <Field label="Do they need a receipt or VAT invoice?">
           <Select name="needs_formal_receipt" options={OPT.formalReceipt} defaultValue={p?.needs_formal_receipt} />
         </Field>
       </div>
@@ -338,14 +340,14 @@ export function PurchasingProfileForm({ businessId, p }: { businessId: string; p
       <Field label="How goods reach them">
         <Checks name="goods_receipt_method" options={OPT.goodsReceipt} values={p?.goods_receipt_method} />
       </Field>
-      <Field label="Purchasing constraints">
+      <Field label="What limits their buying">
         <Checks name="purchasing_constraints" options={OPT.constraints} values={p?.purchasing_constraints} />
       </Field>
-      <Field label="Constraint details">
+      <Field label="More details">
         <Text name="constraints_note" defaultValue={p?.constraints_note} />
       </Field>
       <BasisFields basis={p?.basis} verifiedAt={p?.verified_at} />
-      <Submit>Save purchasing profile</Submit>
+      <Submit>Save</Submit>
     </form>
   );
 }
@@ -361,7 +363,7 @@ export function FollowUpQuickForm({ businessId, contacts = [], requirementId, op
         <Field label="Date *">
           <DateInput name="due_date" defaultValue={defaultDate} />
         </Field>
-        <Field label="Action">
+        <Field label="How">
           <Select name="action_type" options={OPT.followUpAction} defaultValue="call" blank={false} />
         </Field>
         <Field label="With">
@@ -377,10 +379,10 @@ export function FollowUpQuickForm({ businessId, contacts = [], requirementId, op
           </select>
         </Field>
       </div>
-      <Field label="Purpose *">
-        <Text name="purpose" required placeholder="What should happen in this follow-up?" />
+      <Field label="What for? *">
+        <Text name="purpose" required placeholder="e.g. Ask about monthly quantities" />
       </Field>
-      <Submit>Schedule follow-up</Submit>
+      <Submit>Plan follow-up</Submit>
     </form>
   );
 }

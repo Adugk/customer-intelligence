@@ -49,7 +49,7 @@ export async function saveRequirementGroup(fd: FormData) {
   let after: Record<string, unknown> = {};
   if (group === "identity") {
     const desc = str(fd, "customer_description", 300);
-    if (!desc) done(id, "Description is required");
+    if (!desc) done(id, "Please describe the product.");
     after = {
       customer_description: desc,
       category_id: uuid(fd, "category_id"),
@@ -77,10 +77,10 @@ export async function saveRequirementGroup(fd: FormData) {
       seasonality_note: str(fd, "seasonality_note"),
     };
     const lp = after.last_purchase_date as string | null;
-    if (lp && lp > todayISO()) done(id, "Last purchase date cannot be in the future");
+    if (lp && lp > todayISO()) done(id, "The last purchase date can't be in the future.");
     const s = after.smallest_practical_order as number | null;
     const l = after.largest_possible_order as number | null;
-    if (s != null && l != null && l < s) done(id, "Largest possible order must be at least the smallest practical order");
+    if (s != null && l != null && l < s) done(id, "The biggest order can't be smaller than the smallest order.");
   } else if (group === "price") {
     after = {
       current_unit_price: num(fd, "current_unit_price", { min: 0 }),
@@ -93,7 +93,7 @@ export async function saveRequirementGroup(fd: FormData) {
     };
     const t = after.target_price as number | null;
     const m = after.max_acceptable_price as number | null;
-    if (t != null && m != null && m < t) done(id, "Maximum acceptable price must be at least the target price");
+    if (t != null && m != null && m < t) done(id, "The highest price they'd pay can't be lower than the price they want.");
   } else if (group === "stock") {
     after = {
       current_stock_status: choice(fd, "current_stock_status", OPT.stockStatus),
@@ -144,14 +144,14 @@ export async function saveRequirementStatus(fd: FormData) {
   const willingness = choice(fd, "willingness_to_test", OPT.willingness) ?? "not_asked";
   const wBasis = willingness === "not_asked" ? null : choice(fd, "basis", BASIS);
   const npReason = choice(fd, "not_pursuing_reason", OPT.notPursuingReason);
-  if (status === "not_pursuing" && !npReason) done(id, "Choose a reason for not pursuing");
+  if (status === "not_pursuing" && !npReason) done(id, "Please choose why you're not following up.");
 
   // Rule checks (design §2.4-A): status can only advance when the evidence exists.
   if (status === "specified" || status === "qualified") {
     const ctxFor = await loadBusinessScoreData(r.business_id);
     const gaps = qualificationGaps({ ...r, willingness_to_test: willingness, willingness_basis: wBasis }, ctxFor(r));
     const missing = status === "specified" ? gaps.specified : gaps.qualified;
-    if (missing.length) done(id, `Cannot mark as ${status} yet. Missing: ${missing.join("; ")}`);
+    if (missing.length) done(id, `Not yet — first fill in: ${missing.join(", ")}.`);
   }
 
   await tx(async (run) => {
@@ -204,7 +204,7 @@ export async function createProductFromRequirement(fd: FormData) {
   await requireUser();
   const id = uuid(fd, "requirement_id");
   const name = str(fd, "name", 200);
-  if (!id || !name) done(id!, "Product name is required");
+  if (!id || !name) done(id!, "Please enter a product name.");
   await tx(async (run) => {
     const p = (
       await run(

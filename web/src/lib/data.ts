@@ -1,6 +1,6 @@
 // Shared data operations used by several screens.
 import { one, q, type QueryFn, type Row } from "./db";
-import { addDays, todayISO } from "./format";
+import { addDays, fmtDate, todayISO } from "./format";
 import { nextPurchase, scoreRequirement, type ScoreContext } from "./scoring";
 
 export const REMINDER_LEAD_DAYS = 14; // design §9.2 — remind 14 days before an expected purchase
@@ -53,7 +53,7 @@ export async function syncPurchaseReminder(requirementId: string, run: QueryFn =
   await run(
     `insert into follow_up (business_id, requirement_id, due_date, action_type, purpose, origin)
      values ($1, $2, $3, 'check_purchase_timing', $4, 'next_purchase_reminder')`,
-    [r.business_id, r.id, due, `Check purchase timing for "${r.customer_description}" (${np.predicted ? "predicted" : "expected"} ${np.date})`],
+    [r.business_id, r.id, due, `Ask when they will next buy "${r.customer_description}" (${np.predicted ? "we expect about" : "they said"} ${fmtDate(np.date)})`],
   );
 }
 

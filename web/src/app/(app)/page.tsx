@@ -57,24 +57,24 @@ export default async function Dashboard() {
         subtitle={fmtDate(today)}
         actions={
           <Link href="/customers/new" className="btn-primary hidden md:inline-flex">
-            + Quick capture
+            + Add customer
           </Link>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Stat label="Businesses" value={c.businesses} href="/customers" />
-        <Stat label="Active requirements" value={c.active_reqs} href="/customers?has=active" />
-        <Stat label="Qualified" value={c.qualified} href="/demand" />
-        <Stat label="Open opportunities" value={c.open_opps} href="/pipeline" />
-        <Stat label="Follow-ups next 7 days" value={c.upcoming} href="/follow-ups" />
+        <Stat label="Customers" value={c.businesses} href="/customers" />
+        <Stat label="Products customers want" value={c.active_reqs} href="/customers?has=active" />
+        <Stat label="Ready to quote" value={c.qualified} href="/demand" />
+        <Stat label="Open deals" value={c.open_opps} href="/pipeline" />
+        <Stat label="Follow-ups this week" value={c.upcoming} href="/follow-ups" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card
           title={
             <>
-              Follow-ups due {overdue.length > 0 && <Chip tone="danger">{overdue.length} overdue</Chip>}
+              Follow-ups for today {overdue.length > 0 && <Chip tone="danger">{overdue.length} late</Chip>}
             </>
           }
           action={<Link href="/follow-ups" className="text-sm text-brand">All</Link>}
@@ -87,11 +87,11 @@ export default async function Dashboard() {
               ))}
             </ul>
           ) : (
-            <Empty>Nothing due today.</Empty>
+            <Empty>Nothing to do today.</Empty>
           )}
         </Card>
 
-        <Card title="At risk of being forgotten" action={<span className="text-xs text-muted">Active interest, no follow-up scheduled</span>}>
+        <Card title="Don't forget these customers" action={<span className="text-xs text-muted">Interested, but no follow-up planned</span>}>
           {orphans.length ? (
             <ul className="divide-y divide-line">
               {orphans.map((b) => (
@@ -99,18 +99,18 @@ export default async function Dashboard() {
                   <Link href={`/customers/${b.id}`} className="flex items-center justify-between gap-2">
                     <span className="font-medium">{b.trading_name}</span>
                     <span className="text-xs text-muted">
-                      {b.active_reqs} active req · {b.open_opps} opp
+                      {b.active_reqs} products · {b.open_opps} deals
                     </span>
                   </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <Empty>Every interested customer has a next step.</Empty>
+            <Empty>Every interested customer has a follow-up planned.</Empty>
           )}
         </Card>
 
-        <Card title="Expected purchases — next 30 days">
+        <Card title="Customers buying in the next 30 days">
           {upcoming.length ? (
             <ul className="divide-y divide-line">
               {upcoming.map((s) => (
@@ -121,18 +121,18 @@ export default async function Dashboard() {
                       <span className="shrink-0 text-sm tabular-nums">{fmtDate(s.np.date)}</span>
                     </div>
                     <div className="text-xs text-muted">
-                      {s.req.trading_name} · {relDays(s.np.date)} {s.np.predicted && "· predicted from cycle"}
+                      {s.req.trading_name} · {relDays(s.np.date)} {s.np.predicted && "· worked out from how often they buy"}
                     </div>
                   </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <Empty>No purchases expected in the next 30 days yet.</Empty>
+            <Empty>No purchases expected in the next 30 days.</Empty>
           )}
         </Card>
 
-        <Card title="Top opportunities by evidence score" action={<Link href="/demand" className="text-sm text-brand">Demand view</Link>}>
+        <Card title="Best chances to sell" action={<span className="text-xs text-muted">By priority score</span>}>
           {top.length ? (
             <ul className="divide-y divide-line">
               {top.map((s) => (
@@ -150,11 +150,11 @@ export default async function Dashboard() {
               ))}
             </ul>
           ) : (
-            <Empty>Add product requirements to see scored opportunities.</Empty>
+            <Empty>Add products to your customers to see them here.</Empty>
           )}
         </Card>
 
-        <Card title="Data to re-check" action={<span className="text-xs text-muted">Values past their freshness limit</span>}>
+        <Card title="Information to check again" action={<span className="text-xs text-muted">Prices and stock get old quickly</span>}>
           {stale.length ? (
             <ul className="divide-y divide-line">
               {stale.map((s) => (
@@ -169,7 +169,7 @@ export default async function Dashboard() {
               ))}
             </ul>
           ) : (
-            <Empty>All tracked values are fresh.</Empty>
+            <Empty>Everything is up to date.</Empty>
           )}
         </Card>
       </div>

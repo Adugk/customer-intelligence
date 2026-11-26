@@ -17,14 +17,14 @@ export default async function FollowUpsPage() {
   );
   const weekEnd = addDays(today, 7);
   const groups = [
-    { title: "Overdue", items: rows.filter((f) => String(f.due_date) < today) },
+    { title: "Late", items: rows.filter((f) => String(f.due_date) < today) },
     { title: "Today", items: rows.filter((f) => String(f.due_date) === today) },
     { title: "Next 7 days", items: rows.filter((f) => String(f.due_date) > today && String(f.due_date) <= weekEnd) },
     { title: "Later", items: rows.filter((f) => String(f.due_date) > weekEnd) },
   ];
   return (
     <>
-      <PageHeader title="Follow-ups" subtitle={`${rows.length} open`} />
+      <PageHeader title="Follow-ups" subtitle={`${rows.length} planned`} />
       <div className="space-y-4">
         {groups.map((g) => (
           <Card key={g.title} title={`${g.title} (${g.items.length})`}>
@@ -40,11 +40,11 @@ export default async function FollowUpsPage() {
           </Card>
         ))}
         {recent.length > 0 && (
-          <Card title="Recently closed">
+          <Card title="Recently finished">
             <ul className="divide-y divide-line text-sm">
               {recent.map((f) => (
                 <li key={f.id} className="py-2 text-muted">
-                  <span className={f.status === "cancelled" ? "line-through" : ""}>{f.purpose}</span> · {f.trading_name} · {f.status}
+                  <span className={f.status === "cancelled" ? "line-through" : ""}>{f.purpose}</span> · {f.trading_name} · {f.status === "done" ? "done" : "cancelled"}
                 </li>
               ))}
             </ul>

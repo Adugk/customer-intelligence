@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Chip, Empty, PageHeader } from "@/components/ui";
+import { Chip, Empty, PageHeader, StatusChip } from "@/components/ui";
 import { q } from "@/lib/db";
 import { displayPhone, fmtDate, todayISO } from "@/lib/format";
 import { isOneOf, label, OPT } from "@/lib/options";
@@ -59,29 +59,29 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
     <>
       <PageHeader
         title="Customers"
-        subtitle={`${rows.length} ${rows.length === 1 ? "business" : "businesses"}${filtered || search ? " matching" : ""}`}
+        subtitle={`${rows.length} ${rows.length === 1 ? "customer" : "customers"}${filtered || search ? " found" : ""}`}
         actions={
           <Link href="/customers/new" className="btn-primary">
-            + Quick capture
+            + Add customer
           </Link>
         }
       />
       <form className="card mb-4 space-y-3 p-3" role="search">
-        <input className="inp" name="q" defaultValue={search} placeholder="Search name, phone, contact or product…" />
+        <input className="inp" name="q" defaultValue={search} placeholder="Search by name, phone, person or product…" />
         <details open={filtered}>
-          <summary className="cursor-pointer text-sm font-medium text-muted">Filters</summary>
+          <summary className="cursor-pointer text-sm font-medium text-muted">More filters</summary>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             <Sel name="type" value={type} options={OPT.businessType} placeholder="Any type" />
             <Sel name="sector" value={sector} options={OPT.sectors} placeholder="Any sector" />
             <Sel name="stage" value={stage} options={OPT.relationshipStage} placeholder="Any stage" />
-            <Sel name="sourcing" value={sourcing} options={OPT.sourcingStatus} placeholder="Any sourcing status" />
+            <Sel name="sourcing" value={sourcing} options={OPT.sourcingStatus} placeholder="Happy with suppliers? (any)" />
             <Sel name="sub_city" value={subCity} options={OPT.subCity} placeholder="Any sub-city" />
-            <Sel name="has" value={has} options={["active", "qualified"]} placeholder="Any requirements" labels={{ active: "Has active requirement", qualified: "Has qualified requirement" }} />
+            <Sel name="has" value={has} options={["active", "qualified"]} placeholder="Products (any)" labels={{ active: "Wants products from us", qualified: "Has a product ready to quote" }} />
             <Sel name="tag" value={tag} options={tags.map((t) => t.name as string)} placeholder="Any tag" />
           </div>
         </details>
         <div className="flex gap-2">
-          <button className="btn-primary">Apply</button>
+          <button className="btn-primary">Search</button>
           {(filtered || search) && (
             <Link href="/customers" className="btn-ghost">
               Clear
@@ -92,7 +92,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
 
       {rows.length === 0 ? (
         <Empty>
-          {filtered || search ? "No businesses match these filters." : "No customers yet. Use Quick capture to add the first business."}
+          {filtered || search ? "No customers found. Try fewer filters." : "No customers yet. Tap “Add customer” to add the first one."}
         </Empty>
       ) : (
         <ul className="space-y-2">
@@ -114,10 +114,8 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                    <Chip tone="brand">{label(b.relationship_stage)}</Chip>
-                    {b.sourcing_status !== "unknown" && <Chip tone={b.sourcing_status === "underserved" ? "warn" : "neutral"}>{label(b.sourcing_status)}</Chip>}
-                    <Chip>{b.reqs} req</Chip>
-                    {nf ? <Chip tone={nf < today ? "danger" : "info"}>Next: {fmtDate(nf)}</Chip> : <Chip>No follow-up</Chip>}
+                    <StatusChip status={b.relationship_stage} />
+                    {nf ? <Chip tone={nf < today ? "danger" : "neutral"}>{nf < today ? "Late: " : "Follow-up "}{fmtDate(nf)}</Chip> : <Chip tone="warn">No follow-up</Chip>}
                   </div>
                 </Link>
               </li>

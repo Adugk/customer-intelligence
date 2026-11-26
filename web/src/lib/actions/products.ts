@@ -19,9 +19,9 @@ export async function saveProduct(fd: FormData) {
   await requireUser();
   const id = uuid(fd, "product_id");
   const name = str(fd, "name", 200);
-  if (!name) redirect("/products?error=Product+name+is+required");
+  if (!name) redirect("/products?error=Please+enter+a+product+name.");
   const gtin = str(fd, "barcode_gtin", 14);
-  if (gtin && !validGtin(gtin)) redirect("/products?error=Barcode+is+not+a+valid+GTIN+(check+digit+failed)");
+  if (gtin && !validGtin(gtin)) redirect("/products?error=That+barcode+number+isn%27t+valid.+Check+the+digits+and+try+again.");
   const vals = [
     uuid(fd, "category_id"), name, str(fd, "brand", 120), str(fd, "model_sku", 120), gtin, str(fd, "key_specifications"),
     choice(fd, "standard_unit", OPT.unit) ?? "piece", num(fd, "units_per_pack", { min: 0 }),

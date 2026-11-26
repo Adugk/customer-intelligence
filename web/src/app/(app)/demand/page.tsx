@@ -59,8 +59,8 @@ export default async function DemandPage() {
     if (!g) {
       g = {
         key,
-        title: r.product_id ? `${r.product_code} ${r.product_name}` : `Unmatched — ${r.category_name ?? "no category"}`,
-        sub: r.product_id ? (r.category_name ?? "") : "Match these to catalog products to add them up reliably",
+        title: r.product_id ? r.product_name : `Not linked to a product — ${r.category_name ?? "no category"}`,
+        sub: r.product_id ? (r.category_name ?? "") : "Link these to your product list so they add up correctly",
         href: r.product_id ? undefined : undefined,
         unit: r.standard_unit ?? r.unit ?? "piece",
         businesses: new Set(),
@@ -115,9 +115,9 @@ export default async function DemandPage() {
 
   return (
     <>
-      <PageHeader title="Demand" subtitle="Active requirements added up by catalog product. Businesses marked 'strict' confidentiality are excluded." />
+      <PageHeader title="Demand" subtitle="How much your customers need, added up by product. Customers marked “Keep fully private” are left out." />
       {list.length === 0 ? (
-        <Empty>No active requirements yet (interested, specified or qualified).</Empty>
+        <Empty>No customer has said they want a product from us yet.</Empty>
       ) : (
         <div className="space-y-3">
           {list.map((g) => {
@@ -130,7 +130,7 @@ export default async function DemandPage() {
                     <div className="text-xs text-muted">{g.sub}</div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <Chip tone="brand">{g.businesses.size} businesses</Chip>
+                    <Chip tone="info">{g.businesses.size === 1 ? "1 customer" : `${g.businesses.size} customers`}</Chip>
                     {Object.entries(g.statuses).map(([s, n]) => (
                       <Chip key={s}>
                         {label(s)} {n}
@@ -139,19 +139,19 @@ export default async function DemandPage() {
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                  <Metric label={`Monthly demand, evidenced (${g.unit})`} value={fmtNum(g.confirmed, 1)} />
-                  <Metric label="+ estimated" value={fmtNum(g.estimated, 1)} muted />
-                  <Metric label="Expected next 30 / 60 / 90 days" value={`${fmtNum(g.d30)} / ${fmtNum(g.d60)} / ${fmtNum(g.d90)}`} />
-                  <Metric label="Current price range (ETB, evidenced)" value={g.prices.length ? `${fmtNum(Math.min(...g.prices))} – ${fmtNum(Math.max(...g.prices))}` : "—"} />
+                  <Metric label={`Per month, confirmed (${g.unit})`} value={fmtNum(g.confirmed, 1)} />
+                  <Metric label="+ our estimates" value={fmtNum(g.estimated, 1)} muted />
+                  <Metric label="Expected in 30 / 60 / 90 days" value={`${fmtNum(g.d30)} / ${fmtNum(g.d60)} / ${fmtNum(g.d90)}`} />
+                  <Metric label="What they pay now (ETB)" value={g.prices.length ? `${fmtNum(Math.min(...g.prices))} – ${fmtNum(Math.max(...g.prices))}` : "—"} />
                 </div>
-                {g.unknown > 0 && <p className="mt-2 text-xs text-muted">{fmtNum(g.unknown, 1)} more based on assumptions — not counted.</p>}
+                {g.unknown > 0 && <p className="mt-2 text-xs text-muted">{fmtNum(g.unknown, 1)} more based on guesses — not counted.</p>}
                 {mixed && (
                   <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                    Check compatibility before pooling: brand flexibility ({[...g.brand].map(label).join(", ")}), authenticity ({[...g.auth].map(label).join(", ")}).
+                    Check before buying for them together — they want different things: brand ({[...g.brand].map(label).join(", ")}), genuine or generic ({[...g.auth].map(label).join(", ")}).
                   </p>
                 )}
                 <details className="mt-2">
-                  <summary className="cursor-pointer text-sm text-brand">Requirements ({g.reqs.length})</summary>
+                  <summary className="cursor-pointer text-sm text-brand">Which customers ({g.reqs.length})</summary>
                   <ul className="mt-2 space-y-1 text-sm">
                     {g.reqs.map((r) => (
                       <li key={r.id}>
@@ -170,14 +170,14 @@ export default async function DemandPage() {
       )}
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Card title="Most common active problems">
+        <Card title="Most common problems">
           {probList.length ? (
             <ul className="space-y-1 text-sm">
               {probList.map(([cat, v]) => (
                 <li key={cat} className="flex justify-between gap-2">
                   <span>{label(cat)}</span>
                   <span className="tabular-nums text-muted">
-                    {v.total} {v.high > 0 && <span className="text-red-700 dark:text-red-300">({v.high} high+)</span>}
+                    {v.total} {v.high > 0 && <span className="text-red-700 dark:text-red-300">({v.high} serious)</span>}
                   </span>
                 </li>
               ))}
@@ -186,7 +186,7 @@ export default async function DemandPage() {
             <Empty>No problems recorded.</Empty>
           )}
         </Card>
-        <Card title="Most frequent must-haves">
+        <Card title="Most common “must have” conditions">
           {mustHaves.length ? (
             <ul className="space-y-1 text-sm">
               {mustHaves.map((m) => (
@@ -197,13 +197,13 @@ export default async function DemandPage() {
               ))}
             </ul>
           ) : (
-            <Empty>No must-have conditions recorded.</Empty>
+            <Empty>None recorded yet.</Empty>
           )}
         </Card>
-        <Card title="Well-served share">
+        <Card title="Already happy with their supplier">
           <div className="text-2xl font-semibold tabular-nums">{totalReqs ? Math.round((wellServed / totalReqs) * 100) : 0}%</div>
           <p className="text-sm text-muted">
-            {wellServed} of {totalReqs} requirements are already well served. This keeps the market estimate honest.
+            {wellServed} of {totalReqs} products. These customers are unlikely to switch.
           </p>
         </Card>
       </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { daysBetween, fmtDate, todayISO, toISODate } from "@/lib/format";
-import { BASIS, BASIS_META, label, SEVERITY_HELP } from "@/lib/options";
+import { BASIS, BASIS_META, label, SEVERITY_HELP, toneOf } from "@/lib/options";
 
 export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
   return (
@@ -54,7 +54,7 @@ export function Chip({ children, tone = "neutral" }: { children: ReactNode; tone
 
 /** Provenance badge: where a value came from and when it was last verified. */
 export function BasisBadge({ basis, verifiedAt, staleAfterDays }: { basis?: string | null; verifiedAt?: unknown; staleAfterDays?: number }) {
-  if (!basis) return <span className="chip bg-surface-2 text-muted">Not asked</span>;
+  if (!basis) return <span className="chip bg-surface-2 text-muted">Not asked yet</span>;
   const m = BASIS_META[basis];
   const iso = toISODate(verifiedAt);
   const stale = iso && staleAfterDays != null ? daysBetween(iso, todayISO()) > staleAfterDays : false;
@@ -62,7 +62,7 @@ export function BasisBadge({ basis, verifiedAt, staleAfterDays }: { basis?: stri
     <span className={`chip ${m?.cls ?? ""} ${stale ? "opacity-60" : ""}`} title={iso ? `Verified ${fmtDate(iso)}` : undefined}>
       <span aria-hidden>{m?.icon}</span> {m?.label ?? basis}
       {iso && <span className="font-normal opacity-80">· {fmtDate(iso)}</span>}
-      {stale && <span className="font-semibold">· re-check</span>}
+      {stale && <span className="font-semibold">· old, check again</span>}
     </span>
   );
 }
@@ -160,16 +160,16 @@ export function Checks({ name, options, values }: { name: string; options: reado
 export function BasisFields({ prefix = "", basis, verifiedAt, defaultBasis = "confirmed" }: { prefix?: string; basis?: string | null; verifiedAt?: unknown; defaultBasis?: string }) {
   return (
     <div className="grid grid-cols-1 gap-3 rounded-lg bg-surface-2 p-3 sm:grid-cols-2">
-      <Field label="How do we know this?" hint="Estimates count half in scoring; assumptions count zero.">
+      <Field label="Where did this come from?" hint="Guesses don't count towards the priority score.">
         <select className="inp" name={`${prefix}basis`} defaultValue={basis ?? defaultBasis}>
           {BASIS.map((b) => (
             <option key={b} value={b}>
-              {BASIS_META[b].icon} {BASIS_META[b].label}
+              {BASIS_META[b].label}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Last verified" hint="Defaults to today.">
+      <Field label="Date checked" hint="Usually today.">
         <DateInput name={`${prefix}verified_at`} defaultValue={verifiedAt ?? todayISO()} />
       </Field>
     </div>
@@ -228,12 +228,12 @@ export function ScorePill({ score, completeness }: { score: number; completeness
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={`inline-flex h-7 min-w-9 items-center justify-center rounded-md px-1.5 text-sm font-bold tabular-nums ${cls}`}>{score}</span>
-      {completeness != null && <span className="text-xs text-muted tabular-nums">{completeness}% evidence</span>}
+      {completeness != null && <span className="text-xs text-muted tabular-nums">{completeness}% backed by facts</span>}
     </span>
   );
 }
 
-export function StatusChip({ status }: { status: string }) {
-  const tone = ({ qualified: "ok", specified: "info", interested: "brand", mentioned: "neutral", well_served: "neutral", not_pursuing: "neutral" } as const)[status as "qualified"] ?? "neutral";
-  return <Chip tone={tone}>{label(status)}</Chip>;
+/** One status badge style for the whole app (grey / blue / amber / green / red). */
+export function StatusChip({ status }: { status: string | null | undefined }) {
+  return <Chip tone={toneOf(status)}>{label(status)}</Chip>;
 }

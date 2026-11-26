@@ -54,13 +54,13 @@ export async function quickCapture(_prev: { error?: string } | undefined, fd: Fo
   await requireUser();
   const name = str(fd, "trading_name", 120);
   const type = choice(fd, "business_type", OPT.businessType);
-  if (!name || !type) return { error: "Business name and type are required." };
+  if (!name || !type) return { error: "Please enter the business name and choose a type." };
   const rawPhone = str(fd, "phone", 40);
   const phone = normalizePhone(rawPhone);
   const area = str(fd, "area", 120);
   const lat = num(fd, "gps_lat");
   const lng = num(fd, "gps_lng");
-  if (!rawPhone && !area && lat == null) return { error: "Add a phone number or a location so the business can be found again." };
+  if (!rawPhone && !area && lat == null) return { error: "Please add a phone number or a location, so you can find this business again." };
 
   const today = todayISO();
   const permission = choice(fd, "contact_permission", OPT.contactPermission) ?? "not_asked";
@@ -167,7 +167,7 @@ export async function updateBusiness(fd: FormData) {
   const id = cid(fd);
   const name = str(fd, "trading_name", 120);
   const type = choice(fd, "business_type", OPT.businessType);
-  if (!name || !type) redirect(`/customers/${id}/edit?error=Name+and+type+are+required`);
+  if (!name || !type) redirect(`/customers/${id}/edit?error=Please+enter+the+business+name+and+choose+a+type.`);
   const before = await one("select * from business where id = $1", [id]);
   if (!before) redirect("/customers");
   const sourcingBasis = choice(fd, "basis", BASIS);

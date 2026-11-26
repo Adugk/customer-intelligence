@@ -21,15 +21,15 @@ export default async function PipelinePage() {
 
   return (
     <>
-      <PageHeader title="Pipeline" subtitle="Only written orders or payments count as confirmed. Verbal commitments are reported separately." />
+      <PageHeader title="Deals" subtitle="Possible sales you are working on. A deal only counts as confirmed with a written order or a payment." />
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Open opportunities" value={String(open.length)} />
-        <Stat label="Estimated value (ETB, estimate)" value={fmtNum(sum(open))} />
-        <Stat label="Verbal commitments" value={`${verbal.length} · ${fmtNum(sum(verbal))}`} />
-        <Stat label="Confirmed (written/paid)" value={`${confirmed.length} · ${fmtNum(sum(confirmed))}`} />
+        <Stat label="Open deals" value={String(open.length)} />
+        <Stat label="Estimated value (ETB)" value={fmtNum(sum(open))} />
+        <Stat label="Verbal yes only" value={`${verbal.length} · ${fmtNum(sum(verbal))}`} />
+        <Stat label="Confirmed (written or paid)" value={`${confirmed.length} · ${fmtNum(sum(confirmed))}`} />
       </div>
       {rows.length === 0 ? (
-        <Empty>No opportunities yet. Qualify a product requirement, then create an opportunity from it.</Empty>
+        <Empty>No deals yet. When a customer&apos;s product is “Ready to quote”, start a deal from it.</Empty>
       ) : (
         <div className="-mx-4 overflow-x-auto px-4 pb-2">
           <div className="flex gap-3">
@@ -62,7 +62,7 @@ export default async function PipelinePage() {
         </div>
       )}
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Card title="Closed">
+        <Card title="Finished deals">
           {rows.filter((o) => !OPEN.includes(o.stage)).length ? (
             <ul className="divide-y divide-line text-sm">
               {rows
@@ -79,10 +79,10 @@ export default async function PipelinePage() {
                 ))}
             </ul>
           ) : (
-            <Empty>Nothing closed yet.</Empty>
+            <Empty>No finished deals yet.</Empty>
           )}
         </Card>
-        <Card title="Why opportunities were lost">
+        <Card title="Why deals were lost">
           {lost.length ? (
             <ul className="space-y-1 text-sm">
               {lost.map((l) => (
@@ -93,7 +93,7 @@ export default async function PipelinePage() {
               ))}
             </ul>
           ) : (
-            <Empty>No lost opportunities recorded.</Empty>
+            <Empty>No lost deals yet.</Empty>
           )}
         </Card>
       </div>

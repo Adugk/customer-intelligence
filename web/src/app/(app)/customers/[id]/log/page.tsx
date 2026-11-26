@@ -24,11 +24,11 @@ export default async function LogInteractionPage({ params, searchParams }: PageP
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Log interaction" subtitle={b.trading_name} back={{ href: `/customers/${id}`, label: "Back to profile" }} />
+      <PageHeader title="Record conversation" subtitle={b.trading_name} back={{ href: `/customers/${id}`, label: "Back to profile" }} />
       <ErrorNote message={typeof sp.error === "string" ? sp.error : null} />
       {fu && (
         <p className="mb-4 rounded-lg bg-brand/10 px-3 py-2 text-sm text-brand">
-          Completing follow-up: {fu.purpose}
+          Finishing follow-up: {fu.purpose}
         </p>
       )}
       <form action={logInteraction} className="space-y-4">
@@ -42,55 +42,55 @@ export default async function LogInteractionPage({ params, searchParams }: PageP
             <Field label="Time">
               <input className="inp" type="time" name="occurred_time" defaultValue={time} />
             </Field>
-            <Field label="Channel *">
+            <Field label="How did you talk? *">
               <Select name="channel" options={OPT.interactionChannel} defaultValue={fu?.action_type && (OPT.interactionChannel as readonly string[]).includes(fu.action_type) ? fu.action_type : "visit"} blank={false} />
             </Field>
-            <Field label="Started by">
+            <Field label="Who started it">
               <Select name="initiated_by" options={OPT.initiatedBy} defaultValue="us" blank={false} />
             </Field>
-            <Field label="Purpose *" className="col-span-2">
+            <Field label="Why *" className="col-span-2">
               <Select name="purpose" options={OPT.purpose} defaultValue={fu ? "follow_up" : "discovery"} blank={false} />
             </Field>
-            <Field label="Outcome *" className="col-span-2">
+            <Field label="How did it go? *" className="col-span-2">
               <Select name="outcome" options={OPT.outcome} defaultValue="information_gathered" blank={false} />
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="Summary *" hint="One to three sentences.">
+            <Field label="Short summary *" hint="One to three sentences.">
               <Area name="summary" rows={2} required />
             </Field>
           </div>
         </Card>
 
-        <Card title="What was learned — kept separate on purpose">
+        <Card title="What you learned" action={<span className="text-xs text-muted">Keep facts and opinions apart</span>}>
           <div className="grid gap-3 md:grid-cols-3">
-            <Field label="✔ Customer said" hint="Their words. Counts as confirmed.">
+            <Field label="Customer said" hint="Their words.">
               <Area name="customer_statements" rows={5} />
             </Field>
-            <Field label="👁 We observed" hint="What we saw ourselves.">
+            <Field label="We saw" hint="What you saw yourself.">
               <Area name="our_observations" rows={5} />
             </Field>
             <div className="rounded-lg bg-internal p-2">
-              <Field label="Internal — our interpretation" hint="Assumptions and opinions. Never shown to customers.">
+              <Field label="Our opinion (private)" hint="Your guesses and thoughts. Never shown to customers.">
                 <Area name="our_interpretation" rows={5} />
               </Field>
             </div>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Field label="Customer committed to">
+            <Field label="They promised to">
               <Text name="customer_commitments" placeholder="e.g. Send photo of current charger" />
             </Field>
-            <Field label="We committed to" hint="Creates a follow-up if a date is set below.">
+            <Field label="We promised to" hint="A follow-up is planned for it below.">
               <Text name="our_commitments" placeholder="e.g. Send price for 50 units" />
             </Field>
           </div>
         </Card>
 
         {(contacts.length > 0 || reqs.length > 0 || opps.length > 0) && (
-          <Card title="Who and what">
+          <Card title="Who and which products">
             {contacts.length > 0 && (
               <fieldset className="mb-3">
-                <legend className="lbl">People involved</legend>
+                <legend className="lbl">Who you talked to</legend>
                 <div className="flex flex-wrap gap-2">
                   {contacts.map((c, i) => (
                     <label key={c.id} className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line px-3 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand/10 has-[:checked]:text-brand">
@@ -103,7 +103,7 @@ export default async function LogInteractionPage({ params, searchParams }: PageP
             )}
             {reqs.length > 0 && (
               <fieldset className="mb-3">
-                <legend className="lbl">Products discussed</legend>
+                <legend className="lbl">Products you talked about</legend>
                 <div className="flex flex-wrap gap-2">
                   {reqs.map((r) => (
                     <label key={r.id} className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line px-3 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand/10 has-[:checked]:text-brand">
@@ -115,7 +115,7 @@ export default async function LogInteractionPage({ params, searchParams }: PageP
               </fieldset>
             )}
             {opps.length > 0 && (
-              <Field label="Opportunity">
+              <Field label="Deal">
                 <select className="inp" name="opportunity_id" defaultValue={fu?.opportunity_id ?? ""}>
                   <option value="">—</option>
                   {opps.map((o) => (
@@ -129,26 +129,26 @@ export default async function LogInteractionPage({ params, searchParams }: PageP
           </Card>
         )}
 
-        <Card title="Next step *">
+        <Card title="Next step">
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Next follow-up date">
+            <Field label="Follow up on">
               <DateInput name="next_date" defaultValue={addDays(todayISO(), 7)} />
             </Field>
-            <Field label="Action">
+            <Field label="How">
               <Select name="next_action" options={OPT.followUpAction} defaultValue="call" blank={false} />
             </Field>
-            <Field label="Purpose">
+            <Field label="What for">
               <Text name="next_purpose" placeholder="What should happen next?" />
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="…or why no follow-up is needed" hint="Clear the date above and fill this in instead.">
+            <Field label="No follow-up needed? Say why" hint="Clear the date above, then write the reason here.">
               <Text name="no_follow_up_reason" placeholder="e.g. Not a fit — no recurring demand" />
             </Field>
           </div>
         </Card>
 
-        <Submit className="w-full sm:w-auto">Save interaction</Submit>
+        <Submit className="w-full sm:w-auto">Save conversation</Submit>
       </form>
     </div>
   );
