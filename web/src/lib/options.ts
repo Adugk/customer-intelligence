@@ -4,6 +4,9 @@
 export const OPT = {
   businessType: ["retailer", "specialist_retailer", "wholesaler", "distributor", "importer", "service_business", "online_seller", "workshop_manufacturer", "institutional_buyer", "other"],
   sectors: ["cosmetics_beauty", "hair_salon_supplies", "electronics", "mobile_accessories", "footwear", "clothing_apparel", "household", "stationery_office", "auto_parts", "hardware_tools", "medical_pharma", "food_beverage", "other"],
+  customerKind: ["business", "individual"],
+  groupStatus: ["forming", "ordering", "done", "cancelled"],
+  groupCommitment: ["interested", "confirmed"],
   customerSegment: ["consumers", "businesses", "both"],
   pricePositioning: ["budget", "mid_market", "premium", "mixed", "unknown"],
   salesChannels: ["physical_shop", "wholesale_counter", "telegram", "tiktok", "instagram", "facebook", "website_marketplace", "field_sales", "b2b_contracts"],
@@ -160,6 +163,11 @@ const LABEL_OVERRIDES: Record<string, string> = {
   sourcing: "Finding suppliers",
   quoted: "Price sent",
   negotiating: "Negotiating",
+  forming: "Collecting customers",
+  ordering: "Ordering",
+  done: "Done",
+  individual: "Person (personal use)",
+  business: "Business",
   // business types and misc
   service_business: "Service business (salon, barber…)",
   workshop_manufacturer: "Workshop / maker",
@@ -211,6 +219,7 @@ export type Tone = "neutral" | "info" | "warn" | "ok" | "danger" | "brand";
 const TONES: Record<string, Tone> = {
   mentioned: "neutral", interested: "info", specified: "info", qualified: "ok", well_served: "neutral", not_pursuing: "neutral",
   prospect: "neutral", contacted: "info", in_discovery: "info", active_opportunity: "info", first_order_customer: "ok", repeat_customer: "ok", dormant: "warn", not_a_fit: "neutral", do_not_contact: "danger",
+  forming: "info", ordering: "info", done: "ok",
   identified: "neutral", sourcing: "info", quoted: "info", negotiating: "info", reserved: "warn", confirmed: "ok", in_fulfilment: "ok", delivered: "ok", closed_won: "ok", closed_lost: "danger", cancelled: "danger",
 };
 export function toneOf(code: string | null | undefined): Tone {

@@ -17,10 +17,11 @@ export async function hasAnyUser(): Promise<boolean> {
   return (r?.n ?? 0) > 0;
 }
 
-export async function createSession(userId: string) {
+/** `pending2fa`: password was correct but the 6-digit code is still needed (valid 10 minutes, sees no data). */
+export async function createSession(userId: string, pending2fa = false) {
   const token = randomBytes(32).toString("base64url");
-  const expires = new Date(Date.now() + SESSION_DAYS * 86400000);
-  await q("insert into user_session (id, user_id, expires_at) values ($1, $2, $3)", [hash(token), userId, expires.toISOString()]);
+  const expires = new Date(Date.now() + (pending2fa ? 10 * 60000 : SESSION_DAYS * 86400000));
+  await q("insert into user_session (id, user_id, expires_at, pending_2fa) values ($1, $2, $3, $4)", [hash(token), userId, expires.toISOString(), pending2fa]);
   await q("delete from user_session where expires_at < now()");
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
@@ -42,10 +43,21 @@ export async function getUser(): Promise<{ id: string; email: string } | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const r = await one(
-    "select u.id, u.email from user_session s join app_user u on u.id = s.user_id where s.id = $1 and s.expires_at > now()",
+    "select u.id, u.email from user_session s join app_user u on u.id = s.user_id where s.id = $1 and s.expires_at > now() and not s.pending_2fa",
     [hash(token)],
   );
   return r ? { id: r.id, email: r.email } : null;
+}
+
+/** A session that passed the password step but still needs the 6-digit code. */
+export async function getPendingUser(): Promise<{ id: string; email: string; sessionId: string } | null> {
+  const token = (await cookies()).get(COOKIE)?.value;
+  if (!token) return null;
+  const r = await one(
+    "select u.id, u.email, s.id as sid from user_session s join app_user u on u.id = s.user_id where s.id = $1 and s.expires_at > now() and s.pending_2fa",
+    [hash(token)],
+  );
+  return r ? { id: r.id, email: r.email, sessionId: r.sid } : null;
 }
 
 export async function requireUser() {

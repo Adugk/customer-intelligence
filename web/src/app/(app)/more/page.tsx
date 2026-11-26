@@ -5,7 +5,10 @@ import { logout } from "../../(auth)/actions";
 const LINKS = [
   { href: "/pipeline", label: "Deals", desc: "Possible sales you are working on" },
   { href: "/demand", label: "Demand", desc: "How much customers need, added up by product" },
+  { href: "/groups", label: "Buying groups", desc: "Customers who want the same product, bought together" },
   { href: "/products", label: "Products", desc: "Your list of products" },
+  { href: "/results", label: "Results", desc: "Which ways of finding customers turn into buyers" },
+  { href: "/settings", label: "Settings and backup", desc: "Two-step sign-in, full backup, priority score levels" },
 ];
 
 export default function MorePage() {

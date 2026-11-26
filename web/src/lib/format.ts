@@ -25,11 +25,34 @@ export function toISODate(v: unknown): string | null {
   return null;
 }
 
+const ET_MONTHS = ["Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit", "Megabit", "Miyazya", "Ginbot", "Sene", "Hamle", "Nehase", "Pagume"];
+
+/** Gregorian 'YYYY-MM-DD' → Ethiopian calendar date (day, month 1–13, year). */
+export function toEthiopian(iso: string): { day: number; month: number; year: number } {
+  const jdn = Math.floor(Date.parse(iso + "T12:00:00Z") / 86400000) + 2440588;
+  // Standard Amete Mihret offset (one 4-year leap cycle aligned so Pagume 6 falls in years where (year + 1) % 4 == 0).
+  // Checked against: New Year 2019 = 11 Sep 2026, New Year 2020 = 12 Sep 2027, Pagume 6 2019 = 11 Sep 2027,
+  // Genna = 29 Tahsas, Timket = 11 Tir, Meskel = 17 Meskerem.
+  const ERA = 1723856;
+  const r = (((jdn - ERA) % 1461) + 1461) % 1461;
+  const n = (r % 365) + 365 * Math.floor(r / 1460);
+  const year = 4 * Math.floor((jdn - ERA) / 1461) + Math.floor(r / 365) - Math.floor(r / 1460);
+  return { day: (n % 30) + 1, month: Math.floor(n / 30) + 1, year };
+}
+
+export function fmtEthiopian(v: unknown): string {
+  const iso = toISODate(v);
+  if (!iso) return "";
+  const e = toEthiopian(iso);
+  return `${e.day} ${ET_MONTHS[e.month - 1]} ${e.year}`;
+}
+
+/** Gregorian date with the Ethiopian date after it, e.g. "26 Nov 2026 (17 Hidar 2019)". */
 export function fmtDate(v: unknown): string {
   const iso = toISODate(v);
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00Z");
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} (${fmtEthiopian(iso)})`;
 }
 
 export function fmtDateTime(v: unknown): string {

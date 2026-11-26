@@ -64,6 +64,18 @@
 | 18 | Evidence, not assumptions | ✅ Every changing value says where it came from and when it was checked |
 | 19 | Learning from finished deals | ◐ Lost reasons and "how we found them" are recorded; the results report is not built |
 
+### 0.2a Added on 26 November 2026 (after the review above)
+
+| Addition | Effect on the table above |
+|---|---|
+| **Two-step sign-in** (authenticator app + 10 one-time backup codes) and a **full backup download** (all tables as one JSON file, no passwords) | §11 security and backups now built |
+| **Personal (individual) customers** — Business / Person switch; business-only questions hidden for a person; existing records stay "Business" | §0.3 point 3 built (Q16 answered: same list with a switch) |
+| **Results report** — by "how we found them": customers → talked to → ready to quote → deal → bought, plus median days to first sale | Problem 19 → ✅ |
+| **Priority score money levels** editable in Settings, with a count of products in each level | §8.3 bands no longer fixed (Q17 can be set by the owner) |
+| **Merge duplicates** — everything moves to the kept customer in one step; the duplicate is hidden and its name kept as an "other name" | §6.4 merge built |
+| **Ethiopian calendar** — every date shows the Ethiopian date too; date boxes show it live | §15 Q8 built (display; dates are still stored in the Gregorian calendar) |
+| **Buying groups** — compatible needs for one product grouped; each customer keeps their own quantity and "interested / confirmed"; only confirmed counts towards the target; private customers excluded | Problem 16 → ✅ (§7.4 "demand pools") |
+
 ### 0.3 Design changes since v0.1
 
 1. **Plain words on screen.** The design terms stay in this document and in the database. The screens now use everyday words (§2.5 shows both). Stored codes did not change, so existing records keep their meaning. *(This change is in progress and not deployed yet.)*

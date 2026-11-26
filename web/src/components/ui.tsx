@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { daysBetween, fmtDate, todayISO, toISODate } from "@/lib/format";
+import { EcDateInput } from "./date-input";
 import { BASIS, BASIS_META, label, SEVERITY_HELP, toneOf } from "@/lib/options";
 
 export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: { href: string; label: string } }) {
@@ -118,7 +119,7 @@ export function NumberInput({ name, defaultValue, placeholder, step = "any" }: {
 }
 
 export function DateInput({ name, defaultValue }: { name: string; defaultValue?: unknown }) {
-  return <input className="inp" name={name} type="date" defaultValue={toISODate(defaultValue) ?? ""} />;
+  return <EcDateInput name={name} defaultValue={toISODate(defaultValue) ?? ""} />;
 }
 
 export function Area({ name, defaultValue, placeholder, rows = 3, required }: { name: string; defaultValue?: unknown; placeholder?: string; rows?: number; required?: boolean }) {

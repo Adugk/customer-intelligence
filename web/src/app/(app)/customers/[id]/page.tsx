@@ -150,6 +150,15 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
       </div>
 
       <ErrorNote message={typeof sp.error === "string" ? sp.error : null} />
+      {sp.merged && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">Merged. Everything from the duplicate is now on this customer.</p>}
+      {b.merged_into_business_id && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          This customer was merged into another one.{" "}
+          <Link href={`/customers/${b.merged_into_business_id}`} className="underline">
+            Open the customer that was kept
+          </Link>
+        </p>
+      )}
       <Tabs tabs={tabs} current={tab} />
 
       {tab === "summary" && (

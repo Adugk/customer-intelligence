@@ -25,6 +25,8 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
   const [dups, setDups] = useState<Dup[]>([]);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsMsg, setGpsMsg] = useState<string | null>(null);
+  const [kind, setKind] = useState<"business" | "individual">("business");
+  const individual = kind === "individual";
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +61,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
     const fd = new FormData(e.currentTarget);
     if (!String(fd.get("phone") ?? "").trim() && !String(fd.get("area") ?? "").trim() && !gps) {
       e.preventDefault();
-      setClientError("Add a phone number or a location so you can find this business again.");
+      setClientError("Please add a phone number or a location, so you can find this customer again.");
       return;
     }
     setClientError(null);
@@ -73,9 +75,17 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
 
       <section className="card space-y-3 p-4">
         <h2 className="text-sm font-semibold">Customer</h2>
+        <input type="hidden" name="customer_kind" value={kind} />
+        <div className="inline-flex rounded-lg border border-line p-1" role="radiogroup" aria-label="Customer type">
+          {(["business", "individual"] as const).map((k) => (
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`min-h-10 rounded-md px-4 text-sm font-medium ${kind === k ? "bg-brand text-brand-ink" : "text-muted"}`}>
+              {k === "business" ? "A business" : "A person (personal use)"}
+            </button>
+          ))}
+        </div>
         <label className="block">
-          <span className="lbl">Name *</span>
-          <input ref={nameRef} onChange={checkDups} name="trading_name" required maxLength={120} className="inp" placeholder="e.g. Selam Cosmetics — or 'Phone shop opposite Tana Market'" />
+          <span className="lbl">{individual ? "Full name *" : "Name *"}</span>
+          <input ref={nameRef} onChange={checkDups} name="trading_name" required maxLength={120} className="inp" placeholder={individual ? "e.g. Hanna Bekele" : "e.g. Selam Cosmetics — or 'Phone shop opposite Tana Market'"} />
         </label>
         {dups.length > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950">
@@ -93,6 +103,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
           </div>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
+          {!individual && (
           <label className="block">
             <span className="lbl">Type *</span>
             <select name="business_type" required className="inp" defaultValue="">
@@ -102,6 +113,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
               <Opt list={OPT.businessType} />
             </select>
           </label>
+          )}
           <label className="block">
             <span className="lbl">How did we find them?</span>
             <select name="acquisition_source" className="inp" defaultValue="cold_visit">
@@ -109,6 +121,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             </select>
           </label>
         </div>
+        {!individual && (
         <fieldset>
           <legend className="lbl">What they sell</legend>
           <div className="flex flex-wrap gap-2">
@@ -120,6 +133,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             ))}
           </div>
         </fieldset>
+        )}
       </section>
 
       <section className="card space-y-3 p-4">
@@ -157,8 +171,10 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
       </section>
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Person you spoke to</h2>
+        <h2 className="text-sm font-semibold">{individual ? "Contact details" : "Person you spoke to"}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
+          {!individual && (
+            <>
           <label className="block">
             <span className="lbl">Name</span>
             <input name="contact_name" className="inp" placeholder="Name as known, e.g. Ato Dawit" />
@@ -167,6 +183,8 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             <span className="lbl">Role / title</span>
             <input name="job_title" className="inp" placeholder="e.g. Owner, Manager" />
           </label>
+            </>
+          )}
           <label className="block">
             <span className="lbl">Phone</span>
             <input ref={phoneRef} onChange={checkDups} name="phone" type="tel" inputMode="tel" className="inp" placeholder="09… or 07…" />
@@ -178,6 +196,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
             <span className="lbl">Telegram</span>
             <input name="telegram" className="inp" placeholder="@handle or number" />
           </label>
+          {!individual && (
           <label className="block">
             <span className="lbl">Can they decide what to buy?</span>
             <select name="decision_role" className="inp" defaultValue="unknown">
@@ -188,6 +207,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
               <option value="unknown">Don&apos;t know yet</option>
             </select>
           </label>
+          )}
           <label className="block">
             <span className="lbl">May we follow up?</span>
             <select name="contact_permission" className="inp" defaultValue="allowed_all">
@@ -253,6 +273,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
         </label>
       </section>
 
+      {!individual && (
       <details className="card p-4">
         <summary className="cursor-pointer text-sm font-semibold">Is this customer a good fit? (optional)</summary>
         <div className="mt-3 space-y-2 text-sm">
@@ -268,6 +289,7 @@ export function QuickCaptureForm({ categories, defaultFollowUp }: { categories: 
           ))}
         </div>
       </details>
+      )}
 
       <div className="sticky bottom-16 z-10 -mx-4 border-t border-line bg-bg/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
         <button className="btn-primary w-full sm:w-auto" disabled={pending}>

@@ -53,14 +53,16 @@ export async function findDuplicates(name: string, phone: string) {
 export async function quickCapture(_prev: { error?: string } | undefined, fd: FormData): Promise<{ error?: string }> {
   await requireUser();
   const name = str(fd, "trading_name", 120);
-  const type = choice(fd, "business_type", OPT.businessType);
-  if (!name || !type) return { error: "Please enter the business name and choose a type." };
+  const kind = choice(fd, "customer_kind", OPT.customerKind) ?? "business";
+  const individual = kind === "individual";
+  const type = individual ? "individual" : choice(fd, "business_type", OPT.businessType);
+  if (!name || !type) return { error: individual ? "Please enter the person's name." : "Please enter the business name and choose a type." };
   const rawPhone = str(fd, "phone", 40);
   const phone = normalizePhone(rawPhone);
   const area = str(fd, "area", 120);
   const lat = num(fd, "gps_lat");
   const lng = num(fd, "gps_lng");
-  if (!rawPhone && !area && lat == null) return { error: "Please add a phone number or a location, so you can find this business again." };
+  if (!rawPhone && !area && lat == null) return { error: "Please add a phone number or a location, so you can find this customer again." };
 
   const today = todayISO();
   const permission = choice(fd, "contact_permission", OPT.contactPermission) ?? "not_asked";
@@ -77,8 +79,8 @@ export async function quickCapture(_prev: { error?: string } | undefined, fd: Fo
     const b = (
       await run(
         `insert into business (trading_name, alternate_names, business_type, sectors, acquisition_source,
-           rel_categories, rel_recurring, rel_imported, rel_stock)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,
+           rel_categories, rel_recurring, rel_imported, rel_stock, customer_kind)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id`,
         [
           name,
           str(fd, "alternate_names", 300),
@@ -89,6 +91,7 @@ export async function quickCapture(_prev: { error?: string } | undefined, fd: Fo
           fd.get("rel_recurring") ? true : null,
           fd.get("rel_imported") ? true : null,
           fd.get("rel_stock") ? true : null,
+          kind,
         ],
       )
     )[0];
@@ -98,9 +101,10 @@ export async function quickCapture(_prev: { error?: string } | undefined, fd: Fo
       [b.id, choice(fd, "sub_city", OPT.subCity), area, str(fd, "directions", 500), lat, lng],
     );
     let contactId: string | null = null;
-    const contactName = str(fd, "contact_name", 120);
+    // An individual is their own contact and decides for themselves.
+    const contactName = individual ? name : str(fd, "contact_name", 120);
     if (contactName || rawPhone) {
-      const role = choice(fd, "decision_role", OPT.decisionRoles);
+      const role = individual ? "owner" : choice(fd, "decision_role", OPT.decisionRoles);
       const authority = role === "owner" || role === "purchasing_decision_maker" ? "final" : role === "staff_user" ? "none" : "unknown";
       const c = (
         await run(
@@ -111,8 +115,8 @@ export async function quickCapture(_prev: { error?: string } | undefined, fd: Fo
             b.id,
             contactName ?? "Unknown name",
             str(fd, "job_title", 120),
-            JSON.stringify(role && role !== "unknown" ? [role] : []),
-            authority,
+            JSON.stringify(role && role !== "unknown" && !individual ? [role] : []),
+            individual ? "final" : authority,
             role && role !== "unknown" ? "confirmed" : null,
             role && role !== "unknown" ? today : null,
             phone,
@@ -166,10 +170,16 @@ export async function updateBusiness(fd: FormData) {
   await requireUser();
   const id = cid(fd);
   const name = str(fd, "trading_name", 120);
-  const type = choice(fd, "business_type", OPT.businessType);
-  if (!name || !type) redirect(`/customers/${id}/edit?error=Please+enter+the+business+name+and+choose+a+type.`);
+  const kind = choice(fd, "customer_kind", OPT.customerKind) ?? "business";
   const before = await one("select * from business where id = $1", [id]);
   if (!before) redirect("/customers");
+  // Switching back from "person" to "business": reuse the old business type if there was one.
+  const priorType = (OPT.businessType as readonly string[]).includes(before.business_type) ? before.business_type : "other";
+  const type = kind === "individual" ? "individual" : (choice(fd, "business_type", OPT.businessType) ?? priorType);
+  if (!name) redirect(`/customers/${id}/edit?error=Please+enter+a+name.`);
+  // For a person, business-only fields are hidden on the form — keep whatever was stored before.
+  const keep = kind === "individual";
+  const pick = <T,>(field: string, fromForm: T) => (keep ? (Array.isArray(before[field]) ? JSON.stringify(before[field]) : before[field]) : fromForm);
   const sourcingBasis = choice(fd, "basis", BASIS);
   const sourcingStatus = choice(fd, "sourcing_status", OPT.sourcingStatus) ?? "unknown";
   await tx(async (run) => {
@@ -179,19 +189,19 @@ export async function updateBusiness(fd: FormData) {
         years_operating_band=$12, acquisition_source=$13, sourcing_status=$14, sourcing_status_basis=$15,
         sourcing_status_verified_at=$16, confidentiality_level=$17, notes=$18, tin=$19,
         rel_categories=$20, rel_recurring=$21, rel_imported=$22, rel_stock=$23,
-        stage_override=$24, stage_override_reason=$25, not_a_fit_reason=$26, referred_by_business_id=$27, updated_at=now()
+        stage_override=$24, stage_override_reason=$25, not_a_fit_reason=$26, referred_by_business_id=$27, customer_kind=$28, updated_at=now()
        where id=$1`,
       [
-        id, name, str(fd, "alternate_names", 300), str(fd, "legal_name", 200), type, multi(fd, "sectors", OPT.sectors),
-        str(fd, "product_range_summary", 500), multi(fd, "customer_segment", OPT.customerSegment),
-        choice(fd, "price_positioning", OPT.pricePositioning), multi(fd, "sales_channels", OPT.salesChannels),
-        choice(fd, "staff_size_band", OPT.staffSize), choice(fd, "years_operating_band", OPT.yearsOperating),
+        id, name, str(fd, "alternate_names", 300), pick("legal_name", str(fd, "legal_name", 200)), type, pick("sectors", multi(fd, "sectors", OPT.sectors)),
+        pick("product_range_summary", str(fd, "product_range_summary", 500)), pick("customer_segment", multi(fd, "customer_segment", OPT.customerSegment)),
+        pick("price_positioning", choice(fd, "price_positioning", OPT.pricePositioning)), pick("sales_channels", multi(fd, "sales_channels", OPT.salesChannels)),
+        pick("staff_size_band", choice(fd, "staff_size_band", OPT.staffSize)), pick("years_operating_band", choice(fd, "years_operating_band", OPT.yearsOperating)),
         choice(fd, "acquisition_source", OPT.acquisitionSource), sourcingStatus,
         sourcingStatus === "unknown" ? null : sourcingBasis, sourcingStatus === "unknown" ? null : (date(fd, "verified_at") ?? todayISO()),
-        choice(fd, "confidentiality_level", OPT.confidentiality) ?? "standard", str(fd, "notes"), str(fd, "tin", 20),
-        bool(fd, "rel_categories"), bool(fd, "rel_recurring"), bool(fd, "rel_imported"), bool(fd, "rel_stock"),
+        choice(fd, "confidentiality_level", OPT.confidentiality) ?? "standard", str(fd, "notes"), pick("tin", str(fd, "tin", 20)),
+        pick("rel_categories", bool(fd, "rel_categories")), pick("rel_recurring", bool(fd, "rel_recurring")), pick("rel_imported", bool(fd, "rel_imported")), pick("rel_stock", bool(fd, "rel_stock")),
         choice(fd, "stage_override", OPT.stageOverride), str(fd, "stage_override_reason", 300),
-        choice(fd, "not_a_fit_reason", OPT.notAFitReason), uuid(fd, "referred_by_business_id"),
+        choice(fd, "not_a_fit_reason", OPT.notAFitReason), uuid(fd, "referred_by_business_id"), kind,
       ],
     );
     if (before.sourcing_status !== sourcingStatus) {
@@ -203,6 +213,61 @@ export async function updateBusiness(fd: FormData) {
     await recalcStage(id, run);
   });
   back(id);
+}
+
+/**
+ * Merge a duplicate customer (source) into the one to keep (target).
+ * Every linked record moves to the target in one transaction; the duplicate is hidden, never deleted.
+ */
+export async function mergeBusiness(fd: FormData) {
+  await requireUser();
+  const source = cid(fd);
+  const target = uuid(fd, "target_business_id");
+  const back2 = (m: string): never => redirect(`/customers/${source}/edit?error=${encodeURIComponent(m)}`);
+  if (!target) back2("Please choose the customer to keep.");
+  if (target === source) back2("Please choose a different customer.");
+  if (!bool(fd, "confirm_merge")) back2("Please tick the box to confirm the merge.");
+  const [s, t] = await Promise.all([one("select * from business where id = $1", [source]), one("select * from business where id = $1 and archived_at is null", [target])]);
+  if (!s || !t || !target) back2("That customer could not be found.");
+  const src = s as NonNullable<typeof s>;
+  const tgt = t as NonNullable<typeof t>;
+  const keepId = target as string;
+
+  await tx(async (run) => {
+    await run("update branch set business_id = $2, is_main = false where business_id = $1", [source, target]);
+    await run("update contact set business_id = $2, is_primary = false where business_id = $1", [source, target]);
+    for (const table of ["product_requirement", "current_source", "sourcing_problem", "buying_condition", "interaction", "follow_up", "opportunity"]) {
+      await run(`update ${table} set business_id = $2 where business_id = $1`, [source, target]);
+    }
+    await run("insert into business_tag (business_id, tag_id) select $2, tag_id from business_tag where business_id = $1 on conflict do nothing", [source, target]);
+    await run("delete from business_tag where business_id = $1", [source]);
+    await run("update business set referred_by_business_id = $2 where referred_by_business_id = $1 and id <> $2", [source, target]);
+    await run("update value_history set entity_id = $2 where entity_type = 'business' and entity_id = $1", [source, target]);
+    // How-they-buy profile: move it if the kept customer has none; otherwise keep a copy in the history.
+    const sp = (await run("select * from purchasing_profile where business_id = $1", [source]))[0];
+    if (sp) {
+      const tp = (await run("select 1 from purchasing_profile where business_id = $1", [target]))[0];
+      if (tp) {
+        await run(
+          "insert into value_history (entity_type, entity_id, field_group, old_values, new_values, basis) values ('business', $1, 'merged_how_they_buy', $2, '{}', 'documented')",
+          [target, JSON.stringify(sp)],
+        );
+        await run("delete from purchasing_profile where business_id = $1", [source]);
+      } else {
+        await run("update purchasing_profile set business_id = $2 where business_id = $1", [source, target]);
+      }
+    }
+    const names = [tgt.alternate_names, src.trading_name, src.alternate_names].filter(Boolean).join(", ").slice(0, 300);
+    const note = `Merged from ${src.trading_name} (${src.code}) on ${todayISO()}.`;
+    await run("update business set alternate_names = $2, notes = concat_ws(E'\\n', notes, $3::text), updated_at = now() where id = $1", [target, names, note]);
+    await run(
+      "update business set archived_at = now(), merged_into_business_id = $2, notes = concat_ws(E'\\n', notes, $3::text), updated_at = now() where id = $1",
+      [source, target, `Merged into ${tgt.trading_name} (${tgt.code}) on ${todayISO()}.`],
+    );
+    await recalcStage(keepId, run);
+  });
+  revalidatePath("/customers");
+  redirect(`/customers/${keepId}?merged=1`);
 }
 
 export async function archiveBusiness(fd: FormData) {

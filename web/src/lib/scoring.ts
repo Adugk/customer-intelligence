@@ -3,6 +3,7 @@
 import type { Row } from "./db";
 import { addDays, daysBetween, intervalInMonths, todayISO, toISODate } from "./format";
 import { authorityLabel, basisWeight, label } from "./options";
+import { DEFAULT_SCORE_BANDS, type ScoreBands } from "./settings";
 
 export type Component = { key: string; label: string; max: number; points: number; raw: number; evidenced: boolean; detail: string };
 export type ScoreResult = { score: number; completeness: number; components: Component[] };
@@ -12,6 +13,7 @@ export type ScoreContext = {
   contacts: Row[]; // contacts of the business
   product?: Row | null; // matched catalog product
   conditionsCount: number; // buying conditions for this requirement or the whole business
+  bands?: ScoreBands; // owner's money levels (Settings); defaults if missing
 };
 
 export function monthlyDemand(r: Row): { value: number | null; basis: string | null; calculated: boolean } {
@@ -44,11 +46,11 @@ const SEV_POINTS: Record<string, number> = { critical: 20, high: 14, medium: 8, 
 const AUTH_POINTS: Record<string, number> = { final: 10, shared: 6, recommends_only: 3 };
 const WILL_POINTS: Record<string, number> = { agreed_to_trial_order: 15, agreed_to_sample: 12, open_with_conditions: 8 };
 
-// [ASSUMPTION] ETB value bands — recalibrate with real data (design §8.3).
-function valueBand(etbPerMonth: number): number {
-  if (etbPerMonth > 500000) return 20;
-  if (etbPerMonth >= 100000) return 16;
-  if (etbPerMonth >= 20000) return 10;
+// ETB money levels are set by the owner in Settings (design §8.3).
+function valueBand(etbPerMonth: number, b: ScoreBands): number {
+  if (etbPerMonth > b.b3) return 20;
+  if (etbPerMonth >= b.b2) return 16;
+  if (etbPerMonth >= b.b1) return 10;
   return 4;
 }
 
@@ -64,7 +66,7 @@ export function scoreRequirement(r: Row, ctx: ScoreContext): ScoreResult {
   if (md.value != null && r.current_unit_price != null && r.price_currency === "ETB") {
     const value = md.value * Number(r.current_unit_price);
     const w = Math.min(basisWeight(md.basis), basisWeight(r.price_basis));
-    const raw = valueBand(value);
+    const raw = valueBand(value, ctx.bands ?? DEFAULT_SCORE_BANDS);
     comps.push({
       key: "value", label: "How much money it's worth", max: 20, raw,
       points: Math.round(raw * w * 10) / 10, evidenced: w > 0,

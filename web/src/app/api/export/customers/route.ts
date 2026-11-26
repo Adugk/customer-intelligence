@@ -14,7 +14,7 @@ function cell(v: unknown): string {
 export async function GET() {
   if (!(await getUser())) return new Response("Unauthorized", { status: 401 });
   const rows = await q(
-    `select b.code, b.trading_name, b.alternate_names, b.business_type, b.sectors, b.relationship_stage, b.sourcing_status,
+    `select b.code, b.trading_name, b.alternate_names, b.customer_kind, b.business_type, b.sectors, b.relationship_stage, b.sourcing_status,
        b.acquisition_source, b.confidentiality_level,
        br.area, br.sub_city, br.directions,
        c.name as contact_name, c.job_title, c.phone_primary, c.contact_permission,
@@ -27,7 +27,7 @@ export async function GET() {
      left join lateral (select * from contact where business_id = b.id order by is_primary desc limit 1) c on true
      where b.archived_at is null order by b.trading_name`,
   );
-  const headers = ["code", "trading_name", "alternate_names", "business_type", "sectors", "relationship_stage", "sourcing_status", "acquisition_source", "confidentiality_level", "area", "sub_city", "directions", "contact_name", "job_title", "phone", "contact_permission", "requirements", "qualified", "next_follow_up", "created_at"];
+  const headers = ["code", "trading_name", "alternate_names", "customer_kind", "business_type", "sectors", "relationship_stage", "sourcing_status", "acquisition_source", "confidentiality_level", "area", "sub_city", "directions", "contact_name", "job_title", "phone", "contact_permission", "requirements", "qualified", "next_follow_up", "created_at"];
   const lines = [headers.join(",")];
   for (const r of rows) {
     const vals = { ...r, phone: r.contact_permission === "asked_not_to_contact" ? "" : r.phone_primary };

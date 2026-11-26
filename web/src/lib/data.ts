@@ -2,6 +2,7 @@
 import { one, q, type QueryFn, type Row } from "./db";
 import { addDays, fmtDate, todayISO } from "./format";
 import { nextPurchase, scoreRequirement, type ScoreContext } from "./scoring";
+import { getScoreBands } from "./settings";
 
 export const REMINDER_LEAD_DAYS = 14; // design §9.2 — remind 14 days before an expected purchase
 const ACTIVE_STATUSES = ["interested", "specified", "qualified"];
@@ -92,13 +93,15 @@ export async function recordHistory(
 
 /** Score context for all requirements of one business. */
 export async function loadBusinessScoreData(businessId: string) {
-  const [contacts, problems, conds, products] = await Promise.all([
+  const [contacts, problems, conds, products, bands] = await Promise.all([
     q("select * from contact where business_id = $1", [businessId]),
     q("select * from sourcing_problem where business_id = $1", [businessId]),
     q("select requirement_id from buying_condition where business_id = $1", [businessId]),
     q("select p.* from product p join product_requirement r on r.product_id = p.id where r.business_id = $1", [businessId]),
+    getScoreBands(),
   ]);
   return (r: Row): ScoreContext => ({
+    bands,
     contacts,
     problems: problems.filter((p) => p.requirement_id === r.id),
     product: products.find((p) => p.id === r.product_id) ?? null,
@@ -117,8 +120,10 @@ export async function scoreAllActiveRequirements() {
     q("select business_id, requirement_id from buying_condition"),
     q("select * from product"),
   ]);
+  const bands = await getScoreBands();
   return reqs.map((r) => {
     const ctx: ScoreContext = {
+      bands,
       contacts: contacts.filter((c) => c.business_id === r.business_id),
       problems: problems.filter((p) => p.requirement_id === r.id),
       product: products.find((p) => p.id === r.product_id) ?? null,

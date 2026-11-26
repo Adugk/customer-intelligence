@@ -446,7 +446,57 @@ const SEED_CATEGORIES = CATEGORIES.map(([name, regulated, subs], i) => {
   return parent + children;
 }).join("");
 
+// 26 Nov 2026 — two-step login, settings, individual customers, buying groups.
+// Additive only: existing rows keep their values (customer_kind defaults to 'business').
+const CUSTOMER_REFINEMENTS = `
+alter table app_user add column totp_secret text;
+alter table app_user add column totp_enabled boolean not null default false;
+alter table app_user add column totp_last_step bigint;
+alter table app_user add column recovery_codes jsonb not null default '[]';
+alter table user_session add column pending_2fa boolean not null default false;
+
+create table app_setting (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table business add column customer_kind text not null default 'business';
+alter table business add column merged_into_business_id uuid references business(id) on delete set null;
+
+create sequence buying_group_code_seq;
+
+create table buying_group (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'BG-' || lpad(nextval('buying_group_code_seq')::text, 4, '0'),
+  name text not null,
+  product_id uuid not null references product(id) on delete restrict,
+  target_qty double precision,
+  target_date date,
+  status text not null default 'forming',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table buying_group_member (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null references buying_group(id) on delete cascade,
+  requirement_id uuid not null references product_requirement(id) on delete cascade,
+  qty double precision not null,
+  commitment text not null default 'interested',
+  added_at timestamptz not null default now(),
+  unique (group_id, requirement_id),
+  check (qty > 0)
+);
+
+create index on business (customer_kind);
+create index on buying_group (product_id);
+create index on buying_group_member (requirement_id)
+`;
+
 export const MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_init", sql: INIT },
   { id: "002_seed_categories", sql: SEED_CATEGORIES },
+  { id: "003_customer_refinements", sql: CUSTOMER_REFINEMENTS },
 ];

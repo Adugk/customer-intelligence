@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Area, BasisFields, Card, Checks, ErrorNote, Field, PageHeader, Select, Submit, Text } from "@/components/ui";
-import { archiveBusiness, updateBusiness } from "@/lib/actions/customers";
+import { archiveBusiness, mergeBusiness, updateBusiness } from "@/lib/actions/customers";
 import { one, q } from "@/lib/db";
 import { isUuid } from "@/lib/forms";
 import { OPT } from "@/lib/options";
@@ -12,6 +12,7 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
   const b = await one("select * from business where id = $1", [id]);
   if (!b) notFound();
   const others = await q("select id, trading_name, code from business where id <> $1 and archived_at is null order by trading_name", [id]);
+  const isPerson = b.customer_kind === "individual";
 
   return (
     <div className="max-w-3xl">
@@ -27,27 +28,40 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
             <Field label="Other names or spellings" hint="For example the Amharic name. Helps search and avoids duplicates.">
               <Text name="alternate_names" defaultValue={b.alternate_names} />
             </Field>
-            <Field label="Type *">
-              <Select name="business_type" options={OPT.businessType} defaultValue={b.business_type} required />
+            <Field label="This customer is" hint="Change and save; the form then shows the matching questions.">
+              <Select name="customer_kind" options={OPT.customerKind} defaultValue={b.customer_kind ?? "business"} blank={false} labels={{ business: "A business", individual: "A person (personal use)" }} />
             </Field>
-            <Field label="Registered name">
-              <Text name="legal_name" defaultValue={b.legal_name} />
-            </Field>
+            {!isPerson && (
+              <>
+                <Field label="Type *">
+                  <Select name="business_type" options={OPT.businessType} defaultValue={b.business_type} required />
+                </Field>
+                <Field label="Registered name">
+                  <Text name="legal_name" defaultValue={b.legal_name} />
+                </Field>
+              </>
+            )}
           </div>
-          <div className="mt-3">
-            <Field label="What they sell">
-              <Checks name="sectors" options={OPT.sectors} values={b.sectors} />
-            </Field>
-          </div>
-          <div className="mt-3">
-            <Field label="Their products, in a sentence">
-              <Text name="product_range_summary" defaultValue={b.product_range_summary} />
-            </Field>
-          </div>
+          {!isPerson && (
+            <>
+              <div className="mt-3">
+                <Field label="What they sell">
+                  <Checks name="sectors" options={OPT.sectors} values={b.sectors} />
+                </Field>
+              </div>
+              <div className="mt-3">
+                <Field label="Their products, in a sentence">
+                  <Text name="product_range_summary" defaultValue={b.product_range_summary} />
+                </Field>
+              </div>
+            </>
+          )}
         </Card>
 
-        <Card title="More about the business">
+        <Card title={isPerson ? "How we found them" : "More about the business"}>
           <div className="grid gap-3 sm:grid-cols-2">
+            {!isPerson && (
+              <>
             <Field label="Price level">
               <Select name="price_positioning" options={OPT.pricePositioning} defaultValue={b.price_positioning} />
             </Field>
@@ -57,6 +71,8 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
             <Field label="Years operating">
               <Select name="years_operating_band" options={OPT.yearsOperating} defaultValue={b.years_operating_band} />
             </Field>
+              </>
+            )}
             <Field label="How we found them">
               <Select name="acquisition_source" options={OPT.acquisitionSource} defaultValue={b.acquisition_source} />
             </Field>
@@ -70,10 +86,13 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
                 ))}
               </select>
             </Field>
+            {!isPerson && (
             <Field label="Business TIN" hint="Only needed for invoices. Never store personal ID numbers.">
               <Text name="tin" defaultValue={b.tin} inputMode="numeric" />
             </Field>
+            )}
           </div>
+          {!isPerson && (
           <div className="mt-3 space-y-3">
             <Field label="Who they sell to">
               <Checks name="customer_segment" options={OPT.customerSegment} values={b.customer_segment} />
@@ -82,6 +101,7 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
               <Checks name="sales_channels" options={OPT.salesChannels} values={b.sales_channels} />
             </Field>
           </div>
+          )}
         </Card>
 
         <Card title="Happy with current suppliers?">
@@ -93,6 +113,7 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
           </div>
         </Card>
 
+        {!isPerson && (
         <Card title="Is this customer a good fit?">
           <div className="space-y-2 text-sm">
             {(
@@ -109,6 +130,7 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
             ))}
           </div>
         </Card>
+        )}
 
         <Card title="Privacy and status">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -137,7 +159,33 @@ export default async function EditCustomerPage({ params, searchParams }: PagePro
         </div>
       </form>
 
-      <form action={archiveBusiness} className="mt-8 border-t border-line pt-4">
+      <details className="mt-8 border-t border-line pt-4">
+        <summary className="cursor-pointer text-sm font-semibold">Is this customer a duplicate? Merge it</summary>
+        <form action={mergeBusiness} className="mt-3 space-y-3">
+          <input type="hidden" name="business_id" value={id} />
+          <p className="text-sm text-muted">
+            Everything recorded for <strong>{b.trading_name}</strong> — people, products, problems, conversations, follow-ups and deals — moves to the customer you choose below. <strong>{b.trading_name}</strong> is then hidden, and its name is kept as an &quot;other name&quot; so search still finds it. This can&apos;t be undone automatically.
+          </p>
+          <Field label="Keep this customer *">
+            <select className="inp" name="target_business_id" defaultValue="" required>
+              <option value="" disabled>
+                — Choose —
+              </option>
+              {others.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.trading_name} ({o.code})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="confirm_merge" required className="mt-0.5 h-5 w-5 accent-[var(--brand)]" /> I understand that {b.trading_name} will be merged into the customer above.
+          </label>
+          <button className="btn-danger">Merge</button>
+        </form>
+      </details>
+
+      <form action={archiveBusiness} className="mt-6 border-t border-line pt-4">
         <input type="hidden" name="business_id" value={id} />
         <p className="mb-2 text-sm text-muted">Hiding removes this customer from your lists. Nothing is deleted.</p>
         <button className="btn-danger">Hide this customer</button>

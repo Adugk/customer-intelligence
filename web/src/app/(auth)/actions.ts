@@ -4,8 +4,9 @@ import { timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { clearFailedLogins, createSession, destroySession, hasAnyUser, loginBlocked, recordFailedLogin } from "@/lib/auth";
-import { one } from "@/lib/db";
+import { clearFailedLogins, createSession, destroySession, getPendingUser, hasAnyUser, loginBlocked, recordFailedLogin } from "@/lib/auth";
+import { one, q } from "@/lib/db";
+import { hashRecoveryCode, verifyCode } from "@/lib/totp";
 import { str } from "@/lib/forms";
 
 /** In production the owner account can only be created with the SETUP_CODE set in the hosting settings. */
@@ -55,14 +56,52 @@ export async function login(fd: FormData) {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   const key = `${ip}|${email}`;
   if (loginBlocked(key)) redirect("/login?error=Too+many+attempts.+Try+again+in+15+minutes");
-  const u = await one("select id, password_hash from app_user where email = $1", [email]);
+  const u = await one("select id, password_hash, totp_enabled from app_user where email = $1", [email]);
   const ok = u ? await bcrypt.compare(password, u.password_hash) : false;
   if (!ok || !u) {
     recordFailedLogin(key);
     redirect("/login?error=Wrong+email+or+password");
   }
   clearFailedLogins(key);
+  if (u.totp_enabled) {
+    await createSession(u.id, true);
+    redirect("/login/code");
+  }
   await createSession(u.id);
+  redirect("/");
+}
+
+/** Second login step: the 6-digit code from the phone app, or one backup code. */
+export async function verifyLoginCode(fd: FormData) {
+  const p = await getPendingUser();
+  if (!p) redirect("/login?error=Please+sign+in+again.");
+  const key = `code|${p.id}`;
+  if (loginBlocked(key)) redirect("/login/code?error=Too+many+wrong+codes.+Try+again+in+15+minutes.");
+  const u = await one("select totp_secret, totp_last_step, recovery_codes from app_user where id = $1", [p.id]);
+  const code = (str(fd, "code", 20) ?? "").trim();
+  let ok = false;
+  if (u?.totp_secret && /^\d[\d\s]{5,6}$/.test(code)) {
+    const step = verifyCode(u.totp_secret, code);
+    // a code can only be used once
+    if (step != null && (u.totp_last_step == null || step > Number(u.totp_last_step))) {
+      await q("update app_user set totp_last_step = $2 where id = $1", [p.id, step]);
+      ok = true;
+    }
+  } else if (u && code) {
+    const h = hashRecoveryCode(code);
+    const codes: string[] = Array.isArray(u.recovery_codes) ? u.recovery_codes : [];
+    if (codes.includes(h)) {
+      await q("update app_user set recovery_codes = $2 where id = $1", [p.id, JSON.stringify(codes.filter((c) => c !== h))]);
+      ok = true;
+    }
+  }
+  if (!ok) {
+    recordFailedLogin(key);
+    redirect("/login/code?error=That+code+didn%27t+work.+Use+the+newest+code+from+your+app.");
+  }
+  clearFailedLogins(key);
+  await q("delete from user_session where id = $1", [p.sessionId]);
+  await createSession(p.id);
   redirect("/");
 }
 

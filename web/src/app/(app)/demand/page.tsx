@@ -100,6 +100,7 @@ export default async function DemandPage() {
     if (r.brand_requirement) g.brand.add(r.brand_requirement);
     if (r.authenticity_required) g.auth.add(r.authenticity_required);
   }
+  const openGroups = (await q("select count(*)::int as n from buying_group where status in ('forming','ordering')"))[0]?.n ?? 0;
   const list = [...groups.values()].sort((a, b) => b.confirmed + b.estimated - (a.confirmed + a.estimated) || b.businesses.size - a.businesses.size);
 
   const probCats = new Map<string, { total: number; high: number }>();
@@ -115,7 +116,15 @@ export default async function DemandPage() {
 
   return (
     <>
-      <PageHeader title="Demand" subtitle="How much your customers need, added up by product. Customers marked “Keep fully private” are left out." />
+      <PageHeader
+        title="Demand"
+        subtitle="How much your customers need, added up by product. Customers marked “Keep fully private” are left out."
+        actions={
+          <Link href="/groups" className="btn-ghost">
+            Buying groups{openGroups > 0 ? ` (${openGroups})` : ""}
+          </Link>
+        }
+      />
       {list.length === 0 ? (
         <Empty>No customer has said they want a product from us yet.</Empty>
       ) : (
@@ -149,6 +158,11 @@ export default async function DemandPage() {
                   <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
                     Check before buying for them together — they want different things: brand ({[...g.brand].map(label).join(", ")}), genuine or generic ({[...g.auth].map(label).join(", ")}).
                   </p>
+                )}
+                {g.key.startsWith("p:") && g.businesses.size > 0 && (
+                  <Link href={`/groups/new?product=${g.key.slice(2)}`} className="btn-ghost mt-3 min-h-9 px-3 text-xs">
+                    Start a buying group
+                  </Link>
                 )}
                 <details className="mt-2">
                   <summary className="cursor-pointer text-sm text-brand">Which customers ({g.reqs.length})</summary>

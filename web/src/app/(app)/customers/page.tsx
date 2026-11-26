@@ -15,6 +15,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
   const subCity = get("sub_city");
   const has = get("has");
   const tag = get("tag");
+  const kind = get("kind");
 
   const where: string[] = ["b.archived_at is null"];
   const params: unknown[] = [];
@@ -30,6 +31,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
       or exists (select 1 from contact c where c.business_id = b.id and c.name ilike ${s})
       ${digits.length >= 4 ? `or exists (select 1 from contact c where c.business_id = b.id and c.phone_primary like ${p(`%${digits.slice(-8)}%`)})` : ""})`);
   }
+  if (isOneOf(OPT.customerKind, kind)) where.push(`b.customer_kind = ${p(kind)}`);
   if (isOneOf(OPT.businessType, type)) where.push(`b.business_type = ${p(type)}`);
   if (isOneOf(OPT.sectors, sector)) where.push(`b.sectors ? ${p(sector)}`);
   if (isOneOf(OPT.relationshipStage, stage)) where.push(`b.relationship_stage = ${p(stage)}`);
@@ -53,7 +55,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
   );
   const tags = await q("select name from tag order by name");
   const today = todayISO();
-  const filtered = [type, sector, stage, sourcing, subCity, has, tag].some(Boolean);
+  const filtered = [kind, type, sector, stage, sourcing, subCity, has, tag].some(Boolean);
 
   return (
     <>
@@ -71,6 +73,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
         <details open={filtered}>
           <summary className="cursor-pointer text-sm font-medium text-muted">More filters</summary>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <Sel name="kind" value={kind} options={OPT.customerKind} placeholder="Businesses and people" labels={{ business: "Businesses only", individual: "People only" }} />
             <Sel name="type" value={type} options={OPT.businessType} placeholder="Any type" />
             <Sel name="sector" value={sector} options={OPT.sectors} placeholder="Any sector" />
             <Sel name="stage" value={stage} options={OPT.relationshipStage} placeholder="Any stage" />
