@@ -223,7 +223,7 @@ export async function mergeBusiness(fd: FormData) {
   await requireUser();
   const source = cid(fd);
   const target = uuid(fd, "target_business_id");
-  const back2 = (m: string): never => redirect(`/customers/${source}/edit?error=${encodeURIComponent(m)}`);
+  const back2: (m: string) => never = (m: string) => redirect(`/customers/${source}/edit?error=${encodeURIComponent(m)}`);
   if (!target) back2("Please choose the customer to keep.");
   if (target === source) back2("Please choose a different customer.");
   if (!bool(fd, "confirm_merge")) back2("Please tick the box to confirm the merge.");

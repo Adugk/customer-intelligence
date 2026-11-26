@@ -228,7 +228,10 @@ Also built: `current_source.supplier_id` (a customer's current supplier can poin
 
 **Changed tables:** `interaction` and `follow_up` get an optional `supplier_id`; `business_id` becomes optional; a check requires one of the two.
 
-### 4.2 Phase 3 — Requests, sourcing and quotes
+### 4.2 Phase 3 — Requests, sourcing and quotes (built 27 Nov 2026, migration `005_sourcing_orders`)
+
+**As built:** requests (RQ-) with plain-language use types and a "what's missing" check (description, quantity, use, needed-by date); "unsure" use blocks quoting and ordering. Sourcing cases (SC-) group only open requests for the same product, respecting exclusivity. Supplier quotes (SQ-, up to 3 lines) write `supplier_price` history; choosing one needs a reason, the others become "not chosen", rejected suppliers are blocked. Customer quotes (CQ-) keep a private cost estimate with its own rate snapshot (`cost_rate_to_quote`), a printable customer version without internal figures, revisions (old version marked replaced), and a required reason when rejected. **Not built yet:** file/photo storage (needs a storage service decision).
+
 
 - **`sourcing_request`**: customer, contact, channel, `use_type` (`personal` / `business_resale` / `business_own_use` / `unsure`), description, link, photo, product (optional), variant, quantity + unit, quality, alternatives accepted, target price + currency, needed-by date, urgency, delivery place, privacy/exclusivity, status (§5.1), assigned user, `product_requirement_id` (optional link to the recurring need).
 - **`sourcing_case`**: the investigation. Links to one or more requests **only if compatible** (same product, compatible spec and terms, no exclusivity clash). Holds candidate suppliers, missing information, chosen supplier and the *reason* for the choice.
@@ -236,7 +239,12 @@ Also built: `current_source.supplier_id` (a customer's current supplier can poin
 - **Comparison** is a screen, not a table: for each candidate it shows total cost for the requested quantity (using the right tier + delivery), whether MOQ fits, stock, lead time, verification status, payment and warranty terms. **It never auto-selects**; the user picks and must give a reason.
 - **`customer_quote`** + lines: our offer to the customer — product lines, quantity, unit price, service fee, estimated transport, estimated duty/clearance, local delivery, other, total, currency, payment terms, delivery estimate, valid until, exclusions, **uncertain items**. Revisions are new rows with `revision_of` → history kept.
 
-### 4.3 Phase 4 — Orders, buying, money
+### 4.3 Phase 4 — Orders, buying, money (built 27 Nov 2026, same migration)
+
+**As built:** orders (ORD-) only from a sent/accepted, unexpired quote, with how the customer confirmed (in writing / deposit / full payment — payment required for the last two) and a rate snapshot. Supplier orders (PO-) from the case's chosen quote, with per-customer allocation (never more than bought, never more than a customer ordered; stock purchases need a reason). Receipts (GR-) record arrived / damaged / wrong and the check result; arrived good units are shared out first-allocated-first-filled, and delivery is limited to good units that arrived for that order. Payments (PAY-) in and out, each with its own rate; reversing keeps the record. Costs on one order, or shared across a supplier order by quantity / value / equal / manual split. Order and supplier-order statuses are worked out from what actually happened. Profit shows "not known yet" while a cost is missing and becomes final only when a delivered, fully paid order is closed. Cancelling needs no allocations on supplier orders; any amount kept needs a reason, and the rest shows as a refund owed (also on the Money page).
+
+**Simplified for now:** `payment_allocation` is replaced by a direct order or PO link on each payment; weight-based cost splits wait for Phase 5 package weights; delivery is recorded on the order until shipments exist in Phase 5.
+
 
 - **`customer_order`** + lines: created only from an accepted quote (in one transaction). Keeps the agreed price and spec as they were — later supplier price changes never alter it.
 - **`purchase_order`** + lines: to a supplier; statuses in §5.4. Lines link to the supplier quote line used.
@@ -473,9 +481,9 @@ Plus: audit log of important changes, two-step login for all users, private file
 | 0 | Audit | ✅ this document |
 | 1 | Architecture, data design, baggage design | ✅ this document |
 | 2 | Suppliers: profile, contacts, verification, offers, price tiers + history, conversations, follow-ups, link to customer needs and comparison on the product page | ✅ Built and tested 27 Nov 2026 |
-| 3 | Requests, sourcing cases, supplier quotes (with lines), customer quotes with revisions; file storage | Next |
-| 4 | Orders, purchase orders, allocation, receipts + inspection, payments, expenses, exchange rates | |
-| 5 | Packages, shipments, **passenger baggage trips**, transport rates, compliance checks, delivery, claims | |
+| 3 | Requests, sourcing cases, supplier quotes (with lines), customer quotes with revisions; file storage | ✅ Built and tested 27 Nov 2026 (file storage not yet) |
+| 4 | Orders, purchase orders, allocation, receipts + inspection, payments, expenses, exchange rates | ✅ Built and tested 27 Nov 2026 |
+| 5 | Packages, shipments, **passenger baggage trips**, transport rates, compliance checks, delivery, claims | Next |
 | 6 | Users and roles, audit log, tasks, dashboards, reconciliation reports | |
 
 ## 11. Test scenarios (acceptance)

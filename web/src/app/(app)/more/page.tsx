@@ -3,8 +3,11 @@ import { PageHeader } from "@/components/ui";
 import { logout } from "../../(auth)/actions";
 
 const LINKS = [
+  { href: "/orders", label: "Orders", desc: "Customer orders and supplier orders" },
+  { href: "/suppliers", label: "Suppliers", desc: "Who you buy from, their products and prices" },
+  { href: "/money", label: "Money", desc: "Exchange rates, payments, who owes what" },
   { href: "/follow-ups", label: "Follow-ups", desc: "Calls, visits and messages you planned" },
-  { href: "/pipeline", label: "Deals", desc: "Possible sales you are working on" },
+  { href: "/pipeline", label: "Old deals", desc: "Deals recorded before requests and orders existed" },
   { href: "/demand", label: "Demand", desc: "How much customers need, added up by product" },
   { href: "/groups", label: "Buying groups", desc: "Customers who want the same product, bought together" },
   { href: "/products", label: "Products", desc: "Your list of products" },

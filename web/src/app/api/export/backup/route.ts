@@ -9,6 +9,9 @@ const TABLES = [
   "interaction_requirement", "follow_up", "opportunity", "opportunity_line", "opportunity_stage_history", "tag",
   "business_tag", "value_history", "buying_group", "buying_group_member", "app_setting",
   "supplier", "supplier_contact", "supplier_offer", "supplier_price",
+  "exchange_rate", "sourcing_case", "sourcing_request", "request_status_history", "supplier_quote", "supplier_quote_line",
+  "customer_quote", "customer_quote_line", "customer_order", "customer_order_line", "order_status_history", "purchase_order",
+  "purchase_order_line", "purchase_allocation", "goods_receipt", "receipt_line", "payment", "expense", "expense_allocation",
 ];
 
 export async function GET() {

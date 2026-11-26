@@ -42,6 +42,15 @@ export default async function Dashboard() {
     scoreAllActiveRequirements(),
   ]);
   const c = counts[0];
+  const wip = (
+    await q(`select
+      (select count(*)::int from sourcing_request where status in ('new','needs_details')) as need_details,
+      (select count(*)::int from sourcing_request where status in ('ready','finding_suppliers')) as finding,
+      (select count(*)::int from customer_quote where status = 'sent') as quotes_waiting,
+      (select count(*)::int from customer_order where status = 'confirmed') as to_buy,
+      (select count(*)::int from purchase_order where status in ('sent','confirmed_by_supplier','part_received')) as to_receive,
+      (select count(*)::int from customer_order where status in ('received','part_delivered')) as to_deliver`)
+  )[0];
   const top = [...scored].sort((a, b) => b.score - a.score).slice(0, 8);
   const upcoming = scored
     .map((s) => ({ ...s, np: nextPurchase(s.req) }))
@@ -69,6 +78,16 @@ export default async function Dashboard() {
         <Stat label="Ready to quote" value={c.qualified} href="/demand" />
         <Stat label="Open deals" value={c.open_opps} href="/pipeline" />
         <Stat label="Follow-ups this week" value={c.upcoming} href="/follow-ups" />
+      </div>
+
+      <h2 className="mb-2 text-sm font-semibold">Work in progress</h2>
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Stat label="Requests needing details" value={wip.need_details} href="/requests?status=needs_details" />
+        <Stat label="Finding suppliers" value={wip.finding} href="/requests?status=finding_suppliers" />
+        <Stat label="Prices waiting for answer" value={wip.quotes_waiting} href="/requests?status=quote_sent" />
+        <Stat label="Orders to buy" value={wip.to_buy} href="/orders" />
+        <Stat label="Goods to receive" value={wip.to_receive} href="/orders?view=supplier" />
+        <Stat label="Ready to deliver" value={wip.to_deliver} href="/orders" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

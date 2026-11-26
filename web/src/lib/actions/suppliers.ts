@@ -122,7 +122,7 @@ export async function saveVerification(fd: FormData) {
     verified_by: str(fd, "verified_by", 120),
     verification_notes: str(fd, "verification_notes", 2000),
   };
-  const err = (m: string): never => back(id, "check", m);
+  const err: (m: string) => never = (m: string) => back(id, "check", m);
   if (status === "verified") {
     const missing: string[] = [];
     if (!after.licence_checked) missing.push("trade licence checked");
@@ -277,7 +277,7 @@ export async function endPrice(fd: FormData) {
 export async function logSupplierConversation(fd: FormData) {
   await requireUser();
   const id = sid(fd);
-  const err = (m: string): never => redirect(`/suppliers/${id}/log?error=${encodeURIComponent(m)}`);
+  const err: (m: string) => never = (m: string) => redirect(`/suppliers/${id}/log?error=${encodeURIComponent(m)}`);
   const channel = choice(fd, "channel", OPT.supplierChannel);
   const purpose = choice(fd, "purpose", OPT.supplierPurpose);
   const outcome = choice(fd, "outcome", OPT.outcome);

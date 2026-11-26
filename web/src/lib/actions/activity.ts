@@ -19,7 +19,7 @@ export async function logInteraction(fd: FormData) {
   const purpose = choice(fd, "purpose", OPT.purpose);
   const outcome = choice(fd, "outcome", OPT.outcome);
   const summary = str(fd, "summary", 1000);
-  const err = (m: string): never => redirect(`/customers/${bid}/log?error=${encodeURIComponent(m)}`);
+  const err: (m: string) => never = (m: string) => redirect(`/customers/${bid}/log?error=${encodeURIComponent(m)}`);
   if (!channel || !purpose || !outcome || !summary) err("Please fill in how you talked, why, how it went, and a short summary.");
   const nextDate = date(fd, "next_date");
   const noFollowReason = str(fd, "no_follow_up_reason", 300);

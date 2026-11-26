@@ -93,7 +93,7 @@ export default async function RequirementPage({ params, searchParams }: PageProp
           </details>
         </Card>
 
-        <Card title="Next step">
+        <Card title="Next step" action={<Link href={`/requests/new?customer=${bid}&need=${id}`} className="text-sm text-brand">+ Make a request from this</Link>}>
           {r.demand_status === "qualified" ? (
             <>
               <p className="mb-3 text-sm">This product is ready to quote. Start a deal to track the sale.</p>

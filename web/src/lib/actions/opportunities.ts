@@ -48,7 +48,7 @@ export async function updateOpportunity(fd: FormData) {
   if (!o) redirect("/pipeline");
   const stage = choice(fd, "stage", OPT.oppStage) ?? o.stage;
   const commitment = choice(fd, "commitment_level", OPT.commitment) ?? o.commitment_level;
-  const err = (m: string): never => redirect(`/opportunities/${id}?error=${encodeURIComponent(m)}`);
+  const err: (m: string) => never = (m: string) => redirect(`/opportunities/${id}?error=${encodeURIComponent(m)}`);
   if (NEEDS_FINANCIAL_OR_WRITTEN.includes(stage) && !["written", "deposit_paid", "fully_paid"].includes(commitment)) {
     err("A confirmed order needs a written order, a deposit or full payment. If the customer only said yes, choose “Verbal yes (not paid)”.");
   }

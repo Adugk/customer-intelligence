@@ -62,6 +62,13 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
   const b = bizRows[0];
   if (!b) notFound();
   const profile = profileRows[0];
+  const work = await q(
+    `select 'request' as kind, r.id, r.code, r.description as title, r.status, r.created_at from sourcing_request r where r.business_id = $1 and r.status in ('new','needs_details','ready','finding_suppliers','quote_sent')
+     union all
+     select 'order', o.id, o.code, (select string_agg(description, ', ') from customer_order_line where order_id = o.id), o.status, o.created_at from customer_order o where o.business_id = $1
+     order by created_at desc limit 12`,
+    [id],
+  );
   const supplierList = tab === "problems" && sources.length ? await q("select id, display_name from supplier where archived_at is null order by display_name") : [];
   const ctxFor = await loadBusinessScoreData(id);
   const scored = reqs.map((r) => ({ r, ...scoreRequirement(r, ctxFor(r)), np: nextPurchase(r), md: monthlyDemand(r) }));
@@ -117,6 +124,9 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
             <Link href={`/customers/${id}/log`} className="btn-primary">
               Record conversation
             </Link>
+            <Link href={`/requests/new?customer=${id}`} className="btn-ghost">
+              New request
+            </Link>
             <Link href={`/customers/${id}/edit`} className="btn-ghost">
               Edit
             </Link>
@@ -164,7 +174,27 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
       <Tabs tabs={tabs} current={tab} />
 
       {tab === "summary" && (
-        <Summary b={b} id={id} scored={scored} problems={problems} contacts={contacts} interactions={interactions} followUps={followUps} reqName={reqName} today={today} tags={tags} />
+        <>
+          <Card title="Requests and orders" className="mb-4" action={<Link href={`/requests/new?customer=${id}`} className="text-sm text-brand">+ New request</Link>}>
+            {work.length ? (
+              <ul className="divide-y divide-line text-sm">
+                {work.map((w) => (
+                  <li key={w.id}>
+                    <Link href={w.kind === "order" ? `/orders/${w.id}` : `/requests/${w.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <span>
+                        <span className="text-muted">{w.kind === "order" ? "Order" : "Request"} {w.code}</span> · {w.title}
+                      </span>
+                      <StatusChip status={w.status} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">No requests or orders yet.</p>
+            )}
+          </Card>
+          <Summary b={b} id={id} scored={scored} problems={problems} contacts={contacts} interactions={interactions} followUps={followUps} reqName={reqName} today={today} tags={tags} />
+        </>
       )}
 
       {tab === "products" && (

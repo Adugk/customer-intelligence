@@ -6,17 +6,20 @@ import { usePathname } from "next/navigation";
 const MAIN = [
   { href: "/", label: "Today" },
   { href: "/customers", label: "Customers" },
+  { href: "/requests", label: "Requests" },
+  { href: "/orders", label: "Orders" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/follow-ups", label: "Follow-ups" },
-  { href: "/pipeline", label: "Deals" },
   { href: "/demand", label: "Demand" },
   { href: "/products", label: "Products" },
+  { href: "/money", label: "Money" },
   { href: "/results", label: "Results" },
 ];
 
 function isActive(path: string, href: string) {
   if (href === "/") return path === "/";
-  if (href === "/pipeline") return path.startsWith("/pipeline") || path.startsWith("/opportunities");
+  if (href === "/requests") return ["/requests", "/cases", "/quotes"].some((p) => path.startsWith(p));
+  if (href === "/orders") return path.startsWith("/orders") || path.startsWith("/purchase-orders");
   if (href === "/demand") return path.startsWith("/demand") || path.startsWith("/groups");
   if (href === "/customers") return (path === "/customers" || path.startsWith("/customers/") || path.startsWith("/requirements")) && path !== "/customers/new";
   return path === href || path.startsWith(href + "/");
@@ -30,7 +33,7 @@ export function Sidebar({ logout }: { logout: () => Promise<void> }) {
       <Link href="/customers/new" className="btn-primary mb-4 w-full">
         + Add customer
       </Link>
-      <nav className="flex flex-col gap-0.5">
+      <nav className="flex flex-col gap-0.5 overflow-y-auto">
         {MAIN.map((l) => (
           <Link
             key={l.href}
@@ -42,6 +45,9 @@ export function Sidebar({ logout }: { logout: () => Promise<void> }) {
         ))}
       </nav>
       <div className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
+        <Link href="/pipeline" className={`rounded-lg px-3 py-2 text-sm ${path.startsWith("/pipeline") || path.startsWith("/opportunities") ? "bg-brand/10 text-brand" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
+          Old deals
+        </Link>
         <Link href="/settings" className={`rounded-lg px-3 py-2 text-sm ${path.startsWith("/settings") ? "bg-brand/10 text-brand" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
           Settings and backup
         </Link>
@@ -60,7 +66,7 @@ const MOBILE = [
   { href: "/", label: "Today" },
   { href: "/customers", label: "Customers" },
   { href: "/customers/new", label: "Add", primary: true },
-  { href: "/suppliers", label: "Suppliers" },
+  { href: "/requests", label: "Requests" },
   { href: "/more", label: "More" },
 ];
 
@@ -70,7 +76,10 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="grid grid-cols-5">
         {MOBILE.map((l) => {
-          const active = l.href === "/more" ? ["/more", "/follow-ups", "/pipeline", "/opportunities", "/demand", "/groups", "/products", "/results", "/settings"].some((p) => path.startsWith(p)) : !l.primary && isActive(path, l.href);
+          const active =
+            l.href === "/more"
+              ? ["/more", "/orders", "/purchase-orders", "/suppliers", "/money", "/follow-ups", "/pipeline", "/opportunities", "/demand", "/groups", "/products", "/results", "/settings"].some((p) => path.startsWith(p))
+              : !l.primary && isActive(path, l.href);
           return (
             <Link key={l.href} href={l.href} className={`flex min-h-14 flex-col items-center justify-center text-xs font-medium ${active ? "text-brand" : "text-muted"}`}>
               {l.primary ? <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-xl leading-none text-brand-ink" aria-label="Add customer">+</span> : l.label}

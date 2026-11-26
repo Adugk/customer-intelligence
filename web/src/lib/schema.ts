@@ -623,9 +623,349 @@ create index on interaction (supplier_id, occurred_at desc);
 create index on follow_up (supplier_id)
 `;
 
+// Phases 3–4 — requests, sourcing cases, quotes, orders, purchasing, receiving, money.
+// Additive only. Amounts are always amount + currency; conversions keep the rate used (rate_to_etb).
+const SOURCING_ORDERS = `
+create table exchange_rate (
+  id uuid primary key default gen_random_uuid(),
+  from_currency text not null,
+  to_currency text not null default 'ETB',
+  rate double precision not null,
+  rate_date date not null default current_date,
+  source text,
+  note text,
+  created_at timestamptz not null default now(),
+  check (rate > 0),
+  check (from_currency <> to_currency)
+);
+
+create sequence sourcing_case_code_seq;
+create table sourcing_case (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'SC-' || lpad(nextval('sourcing_case_code_seq')::text, 4, '0'),
+  title text not null,
+  product_id uuid references product(id) on delete set null,
+  status text not null default 'open',
+  chosen_quote_id uuid,
+  choice_reason text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create sequence sourcing_request_code_seq;
+create table sourcing_request (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'RQ-' || lpad(nextval('sourcing_request_code_seq')::text, 4, '0'),
+  business_id uuid not null references business(id) on delete cascade,
+  contact_id uuid references contact(id) on delete set null,
+  requirement_id uuid references product_requirement(id) on delete set null,
+  product_id uuid references product(id) on delete set null,
+  sourcing_case_id uuid references sourcing_case(id) on delete set null,
+  description text not null,
+  specification text,
+  reference_link text,
+  quantity double precision not null,
+  unit text not null default 'piece',
+  use_type text not null default 'unsure',
+  accept_alternatives text,
+  target_price double precision,
+  target_currency text,
+  needed_by date,
+  urgency text,
+  delivery_place text,
+  channel text,
+  status text not null default 'new',
+  status_reason text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (quantity > 0)
+);
+
+create table request_status_history (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references sourcing_request(id) on delete cascade,
+  status text not null,
+  note text,
+  changed_at timestamptz not null default now()
+);
+
+create sequence supplier_quote_code_seq;
+create table supplier_quote (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'SQ-' || lpad(nextval('supplier_quote_code_seq')::text, 4, '0'),
+  sourcing_case_id uuid not null references sourcing_case(id) on delete cascade,
+  supplier_id uuid not null references supplier(id) on delete restrict,
+  reference text,
+  received_on date not null default current_date,
+  valid_until date,
+  currency text not null,
+  delivery_charge double precision not null default 0,
+  tax_note text,
+  payment_terms text,
+  lead_time_days double precision,
+  return_terms text,
+  status text not null default 'received',
+  decision_reason text,
+  created_at timestamptz not null default now()
+);
+
+create table supplier_quote_line (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references supplier_quote(id) on delete cascade,
+  offer_id uuid references supplier_offer(id) on delete set null,
+  product_id uuid references product(id) on delete set null,
+  description text not null,
+  qty double precision not null,
+  unit_price double precision not null,
+  moq double precision,
+  check (qty > 0),
+  check (unit_price >= 0)
+);
+
+create sequence customer_quote_code_seq;
+create table customer_quote (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'CQ-' || lpad(nextval('customer_quote_code_seq')::text, 4, '0'),
+  business_id uuid not null references business(id) on delete cascade,
+  sourcing_request_id uuid references sourcing_request(id) on delete set null,
+  revision_of_id uuid references customer_quote(id) on delete set null,
+  revision_no int not null default 1,
+  currency text not null default 'ETB',
+  valid_until date,
+  payment_terms text,
+  delivery_estimate text,
+  included text,
+  exclusions text,
+  uncertain text,
+  service_fee double precision not null default 0,
+  transport_charge double precision not null default 0,
+  duty_charge double precision not null default 0,
+  local_delivery_charge double precision not null default 0,
+  other_charge double precision not null default 0,
+  other_charge_label text,
+  cost_currency text,
+  cost_rate_to_quote double precision,
+  status text not null default 'draft',
+  sent_at timestamptz,
+  decided_at timestamptz,
+  decision_note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table customer_quote_line (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references customer_quote(id) on delete cascade,
+  request_id uuid references sourcing_request(id) on delete set null,
+  product_id uuid references product(id) on delete set null,
+  supplier_quote_line_id uuid references supplier_quote_line(id) on delete set null,
+  description text not null,
+  qty double precision not null,
+  unit_price double precision not null,
+  est_unit_cost double precision,
+  check (qty > 0),
+  check (unit_price >= 0)
+);
+
+create sequence customer_order_code_seq;
+create table customer_order (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'ORD-' || lpad(nextval('customer_order_code_seq')::text, 4, '0'),
+  business_id uuid not null references business(id) on delete restrict,
+  customer_quote_id uuid not null unique references customer_quote(id) on delete restrict,
+  currency text not null,
+  rate_to_etb double precision not null default 1,
+  service_fee double precision not null default 0,
+  transport_charge double precision not null default 0,
+  duty_charge double precision not null default 0,
+  local_delivery_charge double precision not null default 0,
+  other_charge double precision not null default 0,
+  status text not null default 'confirmed',
+  acceptance text not null,
+  confirmed_at timestamptz not null default now(),
+  delivered_on date,
+  delivery_note text,
+  cancelled_reason text,
+  non_refundable_amount double precision,
+  non_refundable_reason text,
+  costs_final boolean not null default false,
+  feedback text,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table customer_order_line (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references customer_order(id) on delete cascade,
+  request_id uuid references sourcing_request(id) on delete set null,
+  product_id uuid references product(id) on delete set null,
+  description text not null,
+  qty double precision not null,
+  unit_price double precision not null,
+  est_unit_cost double precision,
+  delivered_qty double precision not null default 0,
+  check (qty > 0),
+  check (delivered_qty >= 0)
+);
+
+create table order_status_history (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references customer_order(id) on delete cascade,
+  status text not null,
+  note text,
+  changed_at timestamptz not null default now()
+);
+
+create sequence purchase_order_code_seq;
+create table purchase_order (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'PO-' || lpad(nextval('purchase_order_code_seq')::text, 4, '0'),
+  supplier_id uuid not null references supplier(id) on delete restrict,
+  sourcing_case_id uuid references sourcing_case(id) on delete set null,
+  supplier_quote_id uuid references supplier_quote(id) on delete set null,
+  currency text not null,
+  rate_to_etb double precision not null,
+  order_date date not null default current_date,
+  expected_date date,
+  payment_terms text,
+  status text not null default 'draft',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (rate_to_etb > 0)
+);
+
+create table purchase_order_line (
+  id uuid primary key default gen_random_uuid(),
+  po_id uuid not null references purchase_order(id) on delete cascade,
+  product_id uuid references product(id) on delete set null,
+  offer_id uuid references supplier_offer(id) on delete set null,
+  description text not null,
+  qty double precision not null,
+  unit_price double precision not null,
+  check (qty > 0),
+  check (unit_price >= 0)
+);
+
+create table purchase_allocation (
+  id uuid primary key default gen_random_uuid(),
+  po_line_id uuid not null references purchase_order_line(id) on delete cascade,
+  order_line_id uuid not null references customer_order_line(id) on delete cascade,
+  qty double precision not null,
+  created_at timestamptz not null default now(),
+  unique (po_line_id, order_line_id),
+  check (qty > 0)
+);
+
+create sequence goods_receipt_code_seq;
+create table goods_receipt (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'GR-' || lpad(nextval('goods_receipt_code_seq')::text, 4, '0'),
+  po_id uuid not null references purchase_order(id) on delete cascade,
+  received_on date not null default current_date,
+  location text,
+  received_by text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table receipt_line (
+  id uuid primary key default gen_random_uuid(),
+  receipt_id uuid not null references goods_receipt(id) on delete cascade,
+  po_line_id uuid not null references purchase_order_line(id) on delete cascade,
+  qty_received double precision not null default 0,
+  qty_damaged double precision not null default 0,
+  qty_wrong double precision not null default 0,
+  inspection text not null default 'passed',
+  serial_batch text,
+  notes text,
+  check (qty_received >= 0 and qty_damaged >= 0 and qty_wrong >= 0)
+);
+
+create sequence payment_code_seq;
+create table payment (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'PAY-' || lpad(nextval('payment_code_seq')::text, 4, '0'),
+  direction text not null,
+  kind text not null,
+  business_id uuid references business(id) on delete restrict,
+  supplier_id uuid references supplier(id) on delete restrict,
+  order_id uuid references customer_order(id) on delete restrict,
+  po_id uuid references purchase_order(id) on delete restrict,
+  amount double precision not null,
+  currency text not null,
+  rate_to_etb double precision not null,
+  method text,
+  reference text,
+  paid_on date not null default current_date,
+  status text not null default 'completed',
+  handled_by text,
+  note text,
+  created_at timestamptz not null default now(),
+  check (amount > 0),
+  check (rate_to_etb > 0),
+  check (direction in ('in','out')),
+  check (order_id is not null or po_id is not null)
+);
+
+create table expense (
+  id uuid primary key default gen_random_uuid(),
+  category text not null,
+  description text,
+  amount double precision not null,
+  currency text not null,
+  rate_to_etb double precision not null,
+  incurred_on date not null default current_date,
+  po_id uuid references purchase_order(id) on delete restrict,
+  order_id uuid references customer_order(id) on delete restrict,
+  allocation_method text not null,
+  note text,
+  created_at timestamptz not null default now(),
+  check (amount > 0),
+  check (rate_to_etb > 0),
+  check (po_id is not null or order_id is not null)
+);
+
+create table expense_allocation (
+  id uuid primary key default gen_random_uuid(),
+  expense_id uuid not null references expense(id) on delete cascade,
+  order_id uuid not null references customer_order(id) on delete cascade,
+  amount_etb double precision not null,
+  basis text not null
+);
+
+alter table follow_up add column sourcing_request_id uuid references sourcing_request(id) on delete set null;
+
+create index on exchange_rate (from_currency, to_currency, rate_date desc);
+create index on sourcing_request (business_id);
+create index on sourcing_request (sourcing_case_id);
+create index on sourcing_request (status);
+create index on supplier_quote (sourcing_case_id);
+create index on supplier_quote_line (quote_id);
+create index on customer_quote (business_id);
+create index on customer_quote (sourcing_request_id);
+create index on customer_quote_line (quote_id);
+create index on customer_order (business_id);
+create index on customer_order_line (order_id);
+create index on purchase_order (supplier_id);
+create index on purchase_order_line (po_id);
+create index on purchase_allocation (order_line_id);
+create index on goods_receipt (po_id);
+create index on receipt_line (po_line_id);
+create index on payment (order_id);
+create index on payment (po_id);
+create index on expense (po_id);
+create index on expense (order_id);
+create index on expense_allocation (order_id)
+`;
+
 export const MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_init", sql: INIT },
   { id: "002_seed_categories", sql: SEED_CATEGORIES },
   { id: "003_customer_refinements", sql: CUSTOMER_REFINEMENTS },
   { id: "004_suppliers", sql: SUPPLIERS },
+  { id: "005_sourcing_orders", sql: SOURCING_ORDERS },
 ];
