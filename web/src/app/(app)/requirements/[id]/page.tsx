@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/forms";
 import { addDays, fmtDate, fmtDateTime, fmtMoney, fmtNum, todayISO } from "@/lib/format";
 import { label, OPT, SEVERITY_HELP } from "@/lib/options";
 import { monthlyDemand, nextPurchase, qualificationGaps, scoreBand, scoreRequirement } from "@/lib/scoring";
+import { SupplierComparison } from "@/components/supplier-comparison";
 
 export default async function RequirementPage({ params, searchParams }: PageProps<"/requirements/[id]">) {
   const { id } = await params;
@@ -501,6 +502,14 @@ export default async function RequirementPage({ params, searchParams }: PageProp
             <Submit className="col-span-2 sm:col-span-5 sm:w-fit">Add</Submit>
           </form>
         </Group>
+
+        {r.product_id ? (
+          <SupplierComparison productId={r.product_id} neededQty={Number(r.next_purchase_qty ?? r.qty_per_order ?? 1)} unit={r.unit ?? "piece"} qtySource={r.next_purchase_qty != null ? "next purchase" : r.qty_per_order != null ? "usual order" : "no quantity yet"} />
+        ) : (
+          <Card title="Suppliers who sell this">
+            <p className="text-sm text-muted">Link this product to your product list (under “The product”) to see and compare suppliers.</p>
+          </Card>
+        )}
 
         <Card title="Where they buy it now">
           {sources.length ? (

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Area, Card, Details, Empty, ErrorNote, Field, NumberInput, PageHeader, Select, Submit, Text } from "@/components/ui";
 import { saveProduct } from "@/lib/actions/products";
 import { q, type Row } from "@/lib/db";
@@ -8,14 +9,15 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
   const [products, categories] = await Promise.all([
     q(
       `select p.*, c.name as category_name,
-         (select count(*)::int from product_requirement r where r.product_id = p.id and r.archived_at is null) as reqs
+         (select count(*)::int from product_requirement r where r.product_id = p.id and r.archived_at is null) as reqs,
+         (select count(distinct o.supplier_id)::int from supplier_offer o join supplier s on s.id = o.supplier_id where o.product_id = p.id and o.is_active and s.archived_at is null) as suppliers
        from product p left join product_category c on c.id = p.category_id order by p.name`,
     ),
     q("select c.id, c.name, p.name as parent from product_category c left join product_category p on p.id = c.parent_id order by coalesce(p.sort_order, c.sort_order), (c.parent_id is not null), c.sort_order"),
   ]);
   return (
     <div className="max-w-4xl">
-      <PageHeader title="Products" subtitle="Your list of products. Customers' products link to these, so demand adds up correctly." />
+      <PageHeader title="Products" subtitle="Your list of products. Customers' needs and suppliers' offers link to these, so demand adds up and suppliers can be compared." />
       <ErrorNote message={typeof sp.error === "string" ? sp.error : null} />
       <div className="mb-4">
         <Details summary="+ Add a product" open={products.length === 0}>
@@ -35,7 +37,10 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
                     {p.code} · {p.category_name ?? "No category"} {p.brand && `· ${p.brand}`} {p.model_sku && `· ${p.model_sku}`} · counted in {p.standard_unit}s
                   </div>
                 </div>
-                <span className="chip bg-surface-2 text-muted">{p.reqs === 1 ? "1 customer wants it" : `${p.reqs} customers want it`}</span>
+                <span className="flex flex-wrap gap-1.5">
+                  <span className="chip bg-surface-2 text-muted">{p.reqs === 1 ? "1 customer wants it" : `${p.reqs} customers want it`}</span>
+                  <Link href={`/suppliers?q=${encodeURIComponent(p.name)}`} className="chip bg-surface-2 text-muted">{p.suppliers === 1 ? "1 supplier" : `${p.suppliers} suppliers`}</Link>
+                </span>
               </div>
               {p.key_specifications && <pre className="mt-2 font-sans text-sm whitespace-pre-wrap text-muted">{p.key_specifications}</pre>}
               <div className="mt-2">

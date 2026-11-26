@@ -5,6 +5,7 @@ import { FollowUpRow } from "@/components/follow-up-row";
 import { BasisBadge, Card, Chip, Details, Empty, ErrorNote, KV, List, ScorePill, StatusChip, Tabs } from "@/components/ui";
 import { addRequirement } from "@/lib/actions/requirements";
 import { addTag, deleteBranch, deleteContact, deleteItem, removeTag } from "@/lib/actions/customers";
+import { linkCurrentSource } from "@/lib/actions/suppliers";
 import { loadBusinessScoreData } from "@/lib/data";
 import { q, type Row } from "@/lib/db";
 import { isUuid } from "@/lib/forms";
@@ -61,6 +62,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
   const b = bizRows[0];
   if (!b) notFound();
   const profile = profileRows[0];
+  const supplierList = tab === "problems" && sources.length ? await q("select id, display_name from supplier where archived_at is null order by display_name") : [];
   const ctxFor = await loadBusinessScoreData(id);
   const scored = reqs.map((r) => ({ r, ...scoreRequirement(r, ctxFor(r)), np: nextPurchase(r), md: monthlyDemand(r) }));
   const best = scored.reduce((m, s) => (["not_pursuing", "well_served"].includes(s.r.demand_status) ? m : Math.max(m, s.score)), 0);
@@ -328,6 +330,27 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                       </Details>
                       <DeleteButton businessId={id} kind="source" itemId={s.id} />
                     </div>
+                    {supplierList.length > 0 && (
+                      <form action={linkCurrentSource} className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                        <input type="hidden" name="business_id" value={id} />
+                        <input type="hidden" name="source_id" value={s.id} />
+                        <span className="text-muted">Same as a supplier in your list?</span>
+                        <select name="supplier_id" defaultValue={s.supplier_id ?? ""} className="inp w-auto py-1.5">
+                          <option value="">No / don&apos;t know</option>
+                          {supplierList.map((x) => (
+                            <option key={x.id} value={x.id}>
+                              {x.display_name}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="btn-ghost min-h-9 px-3 text-xs">Save</button>
+                        {s.supplier_id && (
+                          <Link href={`/suppliers/${s.supplier_id}`} className="text-brand">
+                            Open supplier
+                          </Link>
+                        )}
+                      </form>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 # Sourcing & Import Platform — Audit and Architecture
 
-**Version:** 0.1 · 26 November 2026
+**Version:** 0.2 · 26 November 2026 (audit refreshed after the customer-module additions; Phase 2 started)
 **Scope:** Phase 0 (audit of the existing app) and Phase 1 (target architecture), including the Passenger Baggage component.
 **Companion document:** [Customer-Module-Design.md](Customer-Module-Design.md) (the customer module, already built).
 
@@ -21,7 +21,8 @@ Markers used below:
 | Database | PostgreSQL. Online: Neon (via Vercel). Local: embedded PGlite when `DATABASE_URL` is not set | Yes |
 | Data access | Plain SQL through one small layer (`web/src/lib/db.ts`). No ORM | Yes — simple and transparent |
 | Migrations | Numbered SQL migrations in `web/src/lib/schema.ts`, applied automatically on start, protected by a database lock | Yes — every new module adds a new migration; old ones are never edited |
-| Authentication | One owner account, bcrypt password, server-side sessions (hashed token in the database), setup locked by `SETUP_CODE` | Extend to multiple users and roles (Phase 6) |
+| Authentication | One owner account, bcrypt password, server-side sessions (hashed token in the database), setup locked by `SETUP_CODE`, **two-step sign-in** (authenticator app + hashed one-time backup codes) | Extend to multiple users and roles (Phase 6) |
+| Settings | `app_setting` key/value table (priority-score money levels) | Yes — use it for future configurable values (transport rates are a separate dated table, see §6.4) |
 | Hosting | Vercel (auto-deploys from GitHub `main`) + Neon Postgres (region `iad1`) | Yes |
 
 **Architecture style:** a single application ("modular monolith"). This is the right choice for a small team. Each business area will get its own folder of actions and screens, but they share one database so records can link to each other. No microservices.
@@ -30,7 +31,7 @@ Markers used below:
 
 | Existing feature | Tables | Works well | Needs improvement | Must keep | Extend with |
 |---|---|---|---|---|---|
-| Customer (business) profile | `business`, `branch`, `tag`, `business_tag` | Progressive entry, duplicate warning, privacy level, auto stage | Too many chips and tabs on the profile; some labels are jargon | All data and codes | A "customer type" for **personal** customers (individuals), not only businesses |
+| Customer profile | `business` (+ `customer_kind` business/individual, `merged_into_business_id`), `branch`, `tag`, `business_tag` | Progressive entry, duplicate warning + merge, privacy level, auto stage, business/person switch | — | All data and codes | Link to requests, quotes and orders (Phase 3–4) |
 | Contacts | `contact` | Buying / payment authority, contact permission | — | All | Shared later with supplier contacts (same pattern, separate table) |
 | How they buy (general) | `purchasing_profile` | Works | Label "purchasing profile" is unclear | All | — |
 | Product needs (recurring demand) | `product_requirement`, `requirement_variant`, `value_history` | Source-of-information tracking, history, staleness, score | Word "requirement" is confusing; score table is heavy | All | Link to **requests** (a need can produce many requests) and to **supplier offers** |
@@ -40,17 +41,19 @@ Markers used below:
 | Deals | `opportunity`, `opportunity_line`, `opportunity_stage_history` | Verbal ≠ confirmed rule, lost reasons | The word "opportunity" is jargon | All | Will be **replaced in daily use** by Requests → Quotes → Orders (Phase 3–4). Existing deals stay readable |
 | Product list | `product_category`, `product` | Shared product identity for adding up demand | No variants, no supplier offers | All | Variants, supplier offers, price history |
 | Demand view | (query) | Evidence split, privacy respected | — | — | Request and order quantities |
+| Buying groups | `buying_group`, `buying_group_member` | Each customer keeps own quantity and "interested/confirmed"; only confirmed counts; private customers excluded | No price limit or payment status per member yet | All | Phase 4: members link to order lines, so price, payment and allocation are tracked per customer (Part 9) |
+| Results report, settings, backup | (queries), `app_setting` | Source → buyer funnel; owner-set score levels; full JSON backup | — | All | Order value and contribution once orders exist |
 | CSV export | (route) | Hides supplier names and internal notes | — | — | Supplier export |
 
 ### 1.3 Weaknesses found
 
 1. **Customer-only conversations and follow-ups.** `interaction.business_id` and `follow_up.business_id` are required. Suppliers cannot use them. *Fix (planned for Phase 2):* make the customer link optional and add `supplier_id`, with a rule that one of the two must be set.
-2. **"Business" assumes every customer is a company.** Personal-use customers (Workflow A) are individuals. *Fix (Phase 3):* add `customer_kind` (`business` / `individual`) with default `business`, so existing records keep working.
+2. ~~**"Business" assumes every customer is a company.**~~ *Fixed 26 Nov 2026:* `customer_kind` (`business` / `individual`), default `business`.
 3. **"Opportunity" mixes sales stages with order stages.** It goes up to "in fulfilment" and "delivered", which belong to orders and shipments. *Fix (Phase 3–4):* new Request → Quote → Order chain. Opportunities become read-only history; new work uses requests.
 4. **Single user, no roles.** Fine now. Roles are planned (§8) before staff join.
 5. **No money tables yet.** Prices exist only as single numbers on product needs. *Fix (Phase 4):* payments, expenses and exchange-rate records with dates.
 6. **No file storage.** Photos and documents are needed for suppliers, inspection and customs. *Fix:* Vercel Blob or Neon-side storage in Phase 3 (needs your approval of the storage service).
-7. **Wording.** Many labels used analyst language ("qualified", "provenance", "opportunity", "requirement", "interaction"). *Fix (done now):* plain-language pass (§9).
+7. **Wording.** Many labels used analyst language ("qualified", "provenance", "opportunity", "requirement", "interaction"). *Fixed:* plain-language pass (§9).
 
 ### 1.4 Safety of existing data
 
@@ -162,7 +165,9 @@ erDiagram
 
 Conventions: every table has `id uuid` primary key, `created_at`, `updated_at`; human codes like `SUP-0001`. Money = `amount double precision` + `currency text` (+ `rate_id` when converted). Status columns are plain text checked by the server against the allowed list and allowed transitions.
 
-### 4.1 Phase 2 — Suppliers (designed, not built yet)
+### 4.1 Phase 2 — Suppliers (built 26–27 Nov 2026, migration `004_suppliers`)
+
+Also built: `current_source.supplier_id` (a customer's current supplier can point to our supplier record), supplier conversations and follow-ups in the shared `interaction` / `follow_up` tables, and the **supplier comparison** on each customer product page (total for the needed quantity using the right price level, minimum-order fit, local delivery, stock, delivery time, terms, check status — never auto-selected; different currencies are flagged, not added together). Prices store an optional quote number (`source_reference`) so Phase 3 supplier quotes can link to them.
 
 **`supplier`** — one supplier company or seller.
 
@@ -467,8 +472,8 @@ Plus: audit log of important changes, two-step login for all users, private file
 |---|---|---|
 | 0 | Audit | ✅ this document |
 | 1 | Architecture, data design, baggage design | ✅ this document |
-| 2 | Suppliers: profile, contacts, verification, offers, price tiers + history, conversations, follow-ups, link to customer needs | Next — paused on 26 Nov 2026 by owner's choice |
-| 3 | Requests, sourcing cases, supplier quotes, comparison, customer quotes; individual customers; file storage | Next |
+| 2 | Suppliers: profile, contacts, verification, offers, price tiers + history, conversations, follow-ups, link to customer needs and comparison on the product page | ✅ Built and tested 27 Nov 2026 |
+| 3 | Requests, sourcing cases, supplier quotes (with lines), customer quotes with revisions; file storage | Next |
 | 4 | Orders, purchase orders, allocation, receipts + inspection, payments, expenses, exchange rates | |
 | 5 | Packages, shipments, **passenger baggage trips**, transport rates, compliance checks, delivery, claims | |
 | 6 | Users and roles, audit log, tasks, dashboards, reconciliation reports | |

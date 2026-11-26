@@ -8,6 +8,7 @@ const TABLES = [
   "requirement_variant", "current_source", "sourcing_problem", "buying_condition", "interaction", "interaction_contact",
   "interaction_requirement", "follow_up", "opportunity", "opportunity_line", "opportunity_stage_history", "tag",
   "business_tag", "value_history", "buying_group", "buying_group_member", "app_setting",
+  "supplier", "supplier_contact", "supplier_offer", "supplier_price",
 ];
 
 export async function GET() {

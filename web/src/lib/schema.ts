@@ -495,8 +495,137 @@ create index on buying_group (product_id);
 create index on buying_group_member (requirement_id)
 `;
 
+// Phase 2 — suppliers (docs/Platform-Architecture.md §4.1). Additive only.
+const SUPPLIERS = `
+create sequence supplier_code_seq;
+
+create table supplier (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique default 'SUP-' || lpad(nextval('supplier_code_seq')::text, 4, '0'),
+  display_name text not null,
+  legal_name text,
+  supplier_type text not null,
+  country text not null default 'United Arab Emirates',
+  city text,
+  address text,
+  website text,
+  email text,
+  phone text,
+  whatsapp text,
+  licence_number text,
+  tax_number text,
+  categories jsonb not null default '[]',
+  brands text,
+  capabilities text,
+  currency text not null default 'AED',
+  vat_note text,
+  payment_terms text,
+  deposit_terms text,
+  credit_terms text,
+  min_order_value double precision,
+  typical_lead_time_days double precision,
+  delivery_charges text,
+  delivery_areas text,
+  sample_policy text,
+  return_policy text,
+  warranty_terms text,
+  export_capable text not null default 'unknown',
+  verification_status text not null default 'unverified',
+  licence_checked boolean not null default false,
+  identity_checked boolean not null default false,
+  address_checked boolean not null default false,
+  authenticity_evidence boolean not null default false,
+  bank_checked boolean not null default false,
+  documents_collected text,
+  verified_at date,
+  verified_by text,
+  verification_notes text,
+  linked_business_id uuid references business(id) on delete set null,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table supplier_contact (
+  id uuid primary key default gen_random_uuid(),
+  supplier_id uuid not null references supplier(id) on delete cascade,
+  name text not null,
+  position text,
+  role text,
+  phone text,
+  whatsapp text,
+  email text,
+  preferred_channel text,
+  is_active boolean not null default true,
+  is_primary boolean not null default false,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table supplier_offer (
+  id uuid primary key default gen_random_uuid(),
+  supplier_id uuid not null references supplier(id) on delete cascade,
+  product_id uuid references product(id) on delete set null,
+  offer_name text not null,
+  brand text,
+  model_sku text,
+  variant text,
+  specification text,
+  unit text not null default 'piece',
+  origin_country text,
+  condition text not null default 'new',
+  stock_status text not null default 'unknown',
+  moq double precision,
+  available_qty double precision,
+  lead_time_days double precision,
+  local_delivery_charge double precision,
+  return_terms text,
+  warranty text,
+  is_active boolean not null default true,
+  last_checked_at date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table supplier_price (
+  id uuid primary key default gen_random_uuid(),
+  offer_id uuid not null references supplier_offer(id) on delete cascade,
+  min_qty double precision not null default 1,
+  unit_price double precision not null,
+  currency text not null,
+  tax_note text,
+  valid_from date not null default current_date,
+  valid_until date,
+  source text,
+  source_reference text,
+  recorded_at timestamptz not null default now(),
+  check (unit_price >= 0),
+  check (min_qty > 0),
+  check (valid_until is null or valid_until >= valid_from)
+);
+
+alter table interaction alter column business_id drop not null;
+alter table interaction add column supplier_id uuid references supplier(id) on delete cascade;
+alter table interaction add constraint interaction_has_owner check (business_id is not null or supplier_id is not null);
+alter table follow_up alter column business_id drop not null;
+alter table follow_up add column supplier_id uuid references supplier(id) on delete cascade;
+alter table follow_up add constraint follow_up_has_owner check (business_id is not null or supplier_id is not null);
+alter table current_source add column supplier_id uuid references supplier(id) on delete set null;
+
+create index on supplier (verification_status);
+create index on supplier (lower(display_name));
+create index on supplier_contact (supplier_id);
+create index on supplier_offer (supplier_id);
+create index on supplier_offer (product_id);
+create index on supplier_price (offer_id, min_qty, valid_from desc);
+create index on interaction (supplier_id, occurred_at desc);
+create index on follow_up (supplier_id)
+`;
+
 export const MIGRATIONS: { id: string; sql: string }[] = [
   { id: "001_init", sql: INIT },
   { id: "002_seed_categories", sql: SEED_CATEGORIES },
   { id: "003_customer_refinements", sql: CUSTOMER_REFINEMENTS },
+  { id: "004_suppliers", sql: SUPPLIERS },
 ];

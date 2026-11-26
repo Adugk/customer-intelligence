@@ -7,6 +7,9 @@ import { label } from "@/lib/options";
 export function FollowUpRow({ f, returnTo, showBusiness = true }: { f: Row; returnTo: string; showBusiness?: boolean }) {
   const today = todayISO();
   const overdue = f.status === "open" && String(f.due_date) < today;
+  // A follow-up belongs to either a customer or a supplier.
+  const base = f.supplier_id ? `/suppliers/${f.supplier_id}` : `/customers/${f.business_id}`;
+  const who = f.supplier_id ? f.supplier_name : f.trading_name;
   return (
     <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -19,8 +22,9 @@ export function FollowUpRow({ f, returnTo, showBusiness = true }: { f: Row; retu
         <div className="mt-0.5 text-sm">{f.purpose}</div>
         <div className="text-xs text-muted">
           {showBusiness && (
-            <Link href={`/customers/${f.business_id}`} className="font-medium text-ink hover:underline">
-              {f.trading_name}
+            <Link href={base} className="font-medium text-ink hover:underline">
+              {who}
+              {f.supplier_id && <span className="font-normal text-muted"> (supplier)</span>}
             </Link>
           )}
           {f.contact_name && <> · {f.contact_name}</>}
@@ -34,7 +38,7 @@ export function FollowUpRow({ f, returnTo, showBusiness = true }: { f: Row; retu
       </div>
       {f.status === "open" && (
         <div className="flex shrink-0 gap-2">
-          <Link href={`/customers/${f.business_id}/log?follow_up=${f.id}`} className="btn-primary min-h-9 px-3 text-xs">
+          <Link href={`${base}/log?follow_up=${f.id}`} className="btn-primary min-h-9 px-3 text-xs">
             Done — record it
           </Link>
           <form action={updateFollowUp}>

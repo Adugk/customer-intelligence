@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui";
 import { logout } from "../../(auth)/actions";
 
 const LINKS = [
+  { href: "/follow-ups", label: "Follow-ups", desc: "Calls, visits and messages you planned" },
   { href: "/pipeline", label: "Deals", desc: "Possible sales you are working on" },
   { href: "/demand", label: "Demand", desc: "How much customers need, added up by product" },
   { href: "/groups", label: "Buying groups", desc: "Customers who want the same product, bought together" },

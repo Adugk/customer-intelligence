@@ -10,11 +10,12 @@ export default async function Dashboard() {
   const today = todayISO();
   const [due, counts, orphans, scored] = await Promise.all([
     q(
-      `select f.*, b.trading_name, b.code as business_code, r.customer_description, c.name as contact_name, c.phone_primary
-       from follow_up f join business b on b.id = f.business_id
+      `select f.*, b.trading_name, b.code as business_code, s.display_name as supplier_name, r.customer_description, c.name as contact_name, c.phone_primary
+       from follow_up f left join business b on b.id = f.business_id
+       left join supplier s on s.id = f.supplier_id
        left join product_requirement r on r.id = f.requirement_id
        left join contact c on c.id = f.contact_id
-       where f.status = 'open' and f.due_date <= $1 and b.archived_at is null
+       where f.status = 'open' and f.due_date <= $1 and coalesce(b.archived_at, s.archived_at) is null
        order by f.due_date, f.created_at limit 30`,
       [addDays(today, 0)],
     ),

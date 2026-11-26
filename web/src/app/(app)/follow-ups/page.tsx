@@ -6,13 +6,14 @@ import { addDays, todayISO } from "@/lib/format";
 export default async function FollowUpsPage() {
   const today = todayISO();
   const rows = await q(
-    `select f.*, b.trading_name, c.name as contact_name, c.phone_primary
-     from follow_up f join business b on b.id = f.business_id left join contact c on c.id = f.contact_id
-     where f.status = 'open' and b.archived_at is null
+    `select f.*, b.trading_name, s.display_name as supplier_name, c.name as contact_name, c.phone_primary
+     from follow_up f left join business b on b.id = f.business_id left join supplier s on s.id = f.supplier_id
+     left join contact c on c.id = f.contact_id
+     where f.status = 'open' and coalesce(b.archived_at, s.archived_at) is null
      order by f.due_date, f.created_at`,
   );
   const recent = await q(
-    `select f.*, b.trading_name from follow_up f join business b on b.id = f.business_id
+    `select f.*, coalesce(b.trading_name, s.display_name) as trading_name from follow_up f left join business b on b.id = f.business_id left join supplier s on s.id = f.supplier_id
      where f.status in ('done','cancelled') order by f.completed_at desc nulls last limit 15`,
   );
   const weekEnd = addDays(today, 7);

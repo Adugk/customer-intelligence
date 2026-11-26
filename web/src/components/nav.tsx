@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const MAIN = [
   { href: "/", label: "Today" },
   { href: "/customers", label: "Customers" },
+  { href: "/suppliers", label: "Suppliers" },
   { href: "/follow-ups", label: "Follow-ups" },
   { href: "/pipeline", label: "Deals" },
   { href: "/demand", label: "Demand" },
@@ -59,7 +60,7 @@ const MOBILE = [
   { href: "/", label: "Today" },
   { href: "/customers", label: "Customers" },
   { href: "/customers/new", label: "Add", primary: true },
-  { href: "/follow-ups", label: "Follow-ups" },
+  { href: "/suppliers", label: "Suppliers" },
   { href: "/more", label: "More" },
 ];
 
@@ -69,7 +70,7 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="grid grid-cols-5">
         {MOBILE.map((l) => {
-          const active = l.href === "/more" ? ["/more", "/pipeline", "/opportunities", "/demand", "/groups", "/products", "/results", "/settings"].some((p) => path.startsWith(p)) : !l.primary && isActive(path, l.href);
+          const active = l.href === "/more" ? ["/more", "/follow-ups", "/pipeline", "/opportunities", "/demand", "/groups", "/products", "/results", "/settings"].some((p) => path.startsWith(p)) : !l.primary && isActive(path, l.href);
           return (
             <Link key={l.href} href={l.href} className={`flex min-h-14 flex-col items-center justify-center text-xs font-medium ${active ? "text-brand" : "text-muted"}`}>
               {l.primary ? <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-xl leading-none text-brand-ink" aria-label="Add customer">+</span> : l.label}
